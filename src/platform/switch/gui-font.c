@@ -79,8 +79,7 @@ static const char* const _fragmentShader =
 	"void main() {\n"
 	// 从纹理中采样颜色
 	"	vec4 texColor = texture2D(tex, texCoord);\n"
-	// 基于cutoff值重新映射alpha通道，实现抗锯齿效果
-	"	texColor.a = clamp((texColor.a - cutoff) / (1.0 - cutoff), 0.0, 1.0);\n"
+
 	// 应用颜色调制（RGB分量乘以调制值）
 	"	texColor.rgb = fragColor.rgb * colorModulus;\n"
 	// 应用片段颜色的alpha值
@@ -676,13 +675,13 @@ void GUIFontDrawSubmit(struct GUIFont* font) {
 	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * 4 * font->currentGlyph, font->colorData);
 
 	// 第一次绘制：绘制黑色阴影（使用低cutoff值）
-	glUniform1f(font->cutoffLocation, 0.3f);
+	glUniform1f(font->cutoffLocation, 0.1f);
 	glUniform3f(font->colorModulusLocation, 0.f, 0.f, 0.f); // 黑色
 	// 使用实例化绘制：每个实例一个四边形（4个顶点）
 	glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, font->currentGlyph);
 
 	// 第二次绘制：绘制彩色文本（使用高cutoff值）
-	glUniform1f(font->cutoffLocation, 0.5f);
+	glUniform1f(font->cutoffLocation, 0.6f);
 	glUniform3f(font->colorModulusLocation, 1.f, 1.f, 1.f); // 白色调制
 	glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, font->currentGlyph);
 
