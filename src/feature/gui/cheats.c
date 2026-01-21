@@ -18,7 +18,7 @@ enum mGUICheatAction {
 	CHEAT_DELETE,
 };
 
-static const char* const offOn[] = { "Off", "On" };
+static const char* const offOn[] = { "未启用", "已启用" };
 
 static void _rebuildCheatView(struct GUIMenuItemList* items, const struct mCheatSet* set) {
 	GUIMenuItemListClear(items);
@@ -30,51 +30,53 @@ static void _rebuildCheatView(struct GUIMenuItemList* items, const struct mCheat
 		};
 	}
 	*GUIMenuItemListAppend(items) = (struct GUIMenuItem) {
-		.title = "Back",
+		.title = "返回",
 		.data = GUI_V_U(CHEAT_BACK),
 	};
 }
 
 static void mGUIShowCheatSet(struct mGUIRunner* runner, struct mCheatDevice* device, struct mCheatSet* set) {
+	char str1[80] = "金手指名称: ";
+	strcat(str1, set->name);
 	struct GUIMenu menu = {
-		.title = "Edit cheat",
-		.subtitle = set->name,
+		.title = "编辑金手指",
+		.subtitle = str1,
 		.index = 0,
 		.background = &runner->background.d
 	};
 	GUIMenuItemListInit(&menu.items, 0);
 
 	struct GUIMenu view = {
-		.title = "View cheat",
+		.title = "查看金手指",
 		.subtitle = set->name,
 		.index = 0,
 		.background = &runner->background.d
 	};
 
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Enable",
+		.title = "启用",
 		.state = set->enabled,
 		.validStates = offOn,
 		.nStates = 2
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Add line",
+		.title = "添加一行",
 		.data = GUI_V_U(CHEAT_ADD_LINE),
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "View lines",
+		.title = "查看金手指",
 		.submenu = &view,
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Rename",
+		.title = "重命名",
 		.data = GUI_V_U(CHEAT_RENAME),
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Delete",
+		.title = "删除金手指",
 		.data = GUI_V_U(CHEAT_DELETE),
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Back",
+		.title = "返回列表",
 		.data = GUI_V_V,
 	};
 
@@ -94,7 +96,7 @@ static void mGUIShowCheatSet(struct mGUIRunner* runner, struct mCheatDevice* dev
 		enum mGUICheatAction action = (enum mGUICheatAction) item->data.v.u;
 		switch (action) {
 		case CHEAT_ADD_LINE:
-			strlcpy(keyboard.title, "Add line", sizeof(keyboard.title));
+			strlcpy(keyboard.title, "添加一行", sizeof(keyboard.title));
 			keyboard.maxLen = 17;
 			if (runner->params.getText(&keyboard) == GUI_KEYBOARD_DONE) {
 				mCheatAddLine(set, keyboard.result, 0);
@@ -102,7 +104,7 @@ static void mGUIShowCheatSet(struct mGUIRunner* runner, struct mCheatDevice* dev
 			}
 			break;
 		case CHEAT_RENAME:
-			strlcpy(keyboard.title, "Rename cheat", sizeof(keyboard.title));
+			strlcpy(keyboard.title, "重命名金手指集", sizeof(keyboard.title));
 			strlcpy(keyboard.result, set->name, sizeof(keyboard.result));
 			keyboard.maxLen = 50;
 			if (runner->params.getText(&keyboard) == GUI_KEYBOARD_DONE) {
@@ -133,32 +135,43 @@ void mGUIShowCheats(struct mGUIRunner* runner) {
 		return;
 	}
 	struct GUIMenu menu = {
-		.title = "Cheats",
+		.title = "金手指",
 		.index = 0,
 		.background = &runner->background.d
 	};
 	GUIMenuItemListInit(&menu.items, 0);
 
 	while (true) {
-		size_t i;
-		for (i = 0; i < mCheatSetsSize(&device->cheats); ++i) {
-			struct mCheatSet* set = *mCheatSetsGetPointer(&device->cheats, i);
-			*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-				.title = set->name,
-				.data = GUI_V_P(set),
-				.state = set->enabled,
-				.validStates = offOn,
-				.nStates = 2
-			};
-		}
 		*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-			.title = "Add new cheat set",
+			.title = "返回游戏",
+			.data = GUI_V_I(-1),
+		};
+		*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+			.title = "添加新的金手指集",
 			.data = GUI_V_V,
 		};
 		*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-			.title = "Back",
-			.data = GUI_V_I(-1),
+			.title = "[金手指列表]",
+			.readonly = true,
 		};
+		size_t i;
+		for (i = 0; i < mCheatSetsSize(&device->cheats); ++i) {
+			struct mCheatSet* set = *mCheatSetsGetPointer(&device->cheats, i);
+			// 计算所需空间
+			size_t name_len = strlen(set->name);
+			char *formatted_name = malloc(name_len + 20);  // 额外空间给序号和点号
+			if (formatted_name) {
+				snprintf(formatted_name, name_len + 20, " [%zu] %s", i + 1, set->name);
+				
+				*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+					.title = formatted_name,
+					.data = GUI_V_P(set),
+					.state = set->enabled,
+					.validStates = offOn,
+					.nStates = 2
+				};
+			}
+		}
 
 		struct GUIMenuItem* item;
 		enum GUIMenuExitReason reason = GUIShowMenu(&runner->params, &menu, &item);
@@ -176,8 +189,8 @@ void mGUIShowCheats(struct mGUIRunner* runner) {
 			struct GUIKeyboardParams keyboard;
 			GUIKeyboardParamsInit(&keyboard);
 			keyboard.maxLen = 50;
-			strlcpy(keyboard.title, "Cheat name", sizeof(keyboard.title));
-			strlcpy(keyboard.result, "New cheat", sizeof(keyboard.result));
+			strlcpy(keyboard.title, "金手指名称", sizeof(keyboard.title));
+			strlcpy(keyboard.result, "新金手指", sizeof(keyboard.result));
 			if (runner->params.getText(&keyboard) == GUI_KEYBOARD_DONE) {
 				set = device->createSet(device, keyboard.result);
 				mCheatAddSet(device, set);
