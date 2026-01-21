@@ -1,0 +1,1 @@
+docker run --rm -t -v "E:\MyCode\mgba-0.10.5\mgba-0.10.5":/home/mgba/src mgba/switch
