@@ -835,6 +835,7 @@ static enum GUIKeyboardStatus _keyboardRun(struct GUIKeyboardParams* keyboard) {
 	swkbdCreate(&swkbd, 0);
 	swkbdConfigMakePresetDefault(&swkbd);
 	swkbdConfigSetStringLenMax(&swkbd, keyboard->maxLen);
+	swkbdConfigSetType(&swkbd, SwkbdType_All);  // 打开中文拼音输入
 	swkbdConfigSetInitialText(&swkbd, keyboard->result);
 	swkbdConfigSetHeaderText(&swkbd, keyboard->title);
 	swkbdConfigSetReturnButtonFlag(&swkbd, keyboard->multiline);
