@@ -42,14 +42,14 @@ static bool _biosNamed(const char* name) {
 
 void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t nExtra) {
 	struct GUIMenu menu = {
-		.title = "Configure",
+		.title = "设置",
 		.index = 0,
 		.background = &runner->background.d
 	};
 	size_t i;
 	GUIMenuItemListInit(&menu.items, 0);
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Frameskip",
+		.title = "跳帧",
 		.data = GUI_V_S("frameskip"),
 		.submenu = 0,
 		.state = 0,
@@ -59,97 +59,97 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 		.nStates = 10
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Show framerate",
+		.title = "显示帧率",
 		.data = GUI_V_S("fpsCounter"),
 		.submenu = 0,
 		.state = false,
 		.validStates = (const char*[]) {
-			"Off", "On"
+			"关闭", "打开"
 		},
 		.nStates = 2
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Show status OSD",
+		.title = "显示状态(静音/加速)",
 		.data = GUI_V_S("showOSD"),
 		.submenu = 0,
 		.state = true,
 		.validStates = (const char*[]) {
-			"Off", "On"
+			"关闭", "打开"
 		},
 		.nStates = 2
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Autosave state",
+		.title = "自动保存",
 		.data = GUI_V_S("autosave"),
 		.submenu = 0,
 		.state = true,
 		.validStates = (const char*[]) {
-			"Off", "On"
+			"关闭", "打开"
 		},
 		.nStates = 2
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Autoload state",
+		.title = "自动加载",
 		.data = GUI_V_S("autoload"),
 		.submenu = 0,
 		.state = true,
 		.validStates = (const char*[]) {
-			"Off", "On"
+			"关闭", "打开"
 		},
 		.nStates = 2
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Mute",
+		.title = "关闭声音",
 		.data = GUI_V_S("mute"),
 		.submenu = 0,
 		.state = false,
 		.validStates = (const char*[]) {
-			"Off", "On"
+			"关闭", "打开"
 		},
 		.nStates = 2
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Fast forward mute",
+		.title = "加速时关闭声音",
 		.data = GUI_V_S("fastForwardMute"),
 		.submenu = 0,
 		.state = false,
 		.validStates = (const char*[]) {
-			"Off", "On"
+			"关闭", "打开"
 		},
 		.nStates = 2
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Use BIOS if found",
+		.title = "使用BIOS文件(如果有的话)",
 		.data = GUI_V_S("useBios"),
 		.submenu = 0,
 		.state = true,
 		.validStates = (const char*[]) {
-			"Off", "On"
+			"关闭", "打开"
 		},
 		.nStates = 2
 	};
 #ifdef M_CORE_GBA
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Select GBA BIOS path",
+		.title = "选择GBA BIOS路径",
 		.data = GUI_V_S("gba.bios"),
 	};
 #endif
 #ifdef M_CORE_GB
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Select GB BIOS path",
+		.title = "选择GB BIOS路径",
 		.data = GUI_V_S("gb.bios"),
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Select GBC BIOS path",
+		.title = "选择GBC BIOS路径",
 		.data = GUI_V_S("gbc.bios"),
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Select SGB BIOS path",
+		.title = "选择SGB BIOS路径",
 		.data = GUI_V_S("sgb.bios"),
 	};
 	struct GUIMenuItem* palette = GUIMenuItemListAppend(&menu.items);
 	*palette = (struct GUIMenuItem) {
-		.title = "GB palette",
+		.title = "GB调色板",
 		.data = GUI_V_S("gb.pal"),
 	};
 	const struct GBColorPreset* colorPresets;
@@ -161,35 +161,35 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 	palette->validStates = paletteStates;
 #endif
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Interframe blending",
+		.title = "帧间混合",
 		.data = GUI_V_S("interframeBlending"),
 		.submenu = 0,
 		.state = false,
 		.validStates = (const char*[]) {
-			"Off", "On"
+			"关闭", "打开"
 		},
 		.nStates = 2
 	};
 #if defined(M_CORE_GBA) && (defined(GEKKO) || defined(__SWITCH__) || defined(PSP2))
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Enable GBP features",
+		.title = "启用GBP功能",
 		.data = GUI_V_S("gba.forceGbp"),
 		.submenu = 0,
 		.state = false,
 		.validStates = (const char*[]) {
-			"Off", "On"
+			"关闭", "打开"
 		},
 		.nStates = 2
 	};
 #endif
 #ifdef M_CORE_GB
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Enable SGB features",
+		.title = "启用SGB功能",
 		.data = GUI_V_S("sgb.model"),
 		.submenu = 0,
 		.state = true,
 		.validStates = (const char*[]) {
-			"Off", "On"
+			"关闭", "打开"
 		},
 		.stateMappings = (const struct GUIVariant[]) {
 			GUI_V_S("DMG"),
@@ -198,22 +198,22 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 		.nStates = 2
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Enable SGB borders",
+		.title = "启用SGB边框",
 		.data = GUI_V_S("sgb.borders"),
 		.submenu = 0,
 		.state = true,
 		.validStates = (const char*[]) {
-			"Off", "On"
+			"关闭", "打开"
 		},
 		.nStates = 2
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Crop SGB borders",
+		.title = "裁剪SGB边框",
 		.data = GUI_V_S("sgb.borderCrop"),
 		.submenu = 0,
 		.state = false,
 		.validStates = (const char*[]) {
-			"Off", "On"
+			"关闭", "打开"
 		},
 		.nStates = 2
 	};
@@ -228,7 +228,7 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 			i = 0;
 		}
 		*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-			.title = "Remap controls",
+			.title = "映射按键",
 			.data = GUI_V_U(CONFIG_REMAP),
 			.state = 0,
 			.validStates = i ? mapNames : 0,
@@ -239,11 +239,11 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 		*GUIMenuItemListAppend(&menu.items) = extra[i];
 	}
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Save",
+		.title = "保存设置",
 		.data = GUI_V_U(CONFIG_SAVE),
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Cancel",
+		.title = "取消",
 		.data = GUI_V_V,
 	};
 	enum GUIMenuExitReason reason;

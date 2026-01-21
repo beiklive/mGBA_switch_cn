@@ -1112,19 +1112,19 @@ int main(int argc, char* argv[]) {
 		},
 		.configExtra = (struct GUIMenuItem[]) {
 			{
-				.title = "Screen mode",
+				.title = "屏幕模式",
 				.data = GUI_V_S("screenMode"),
 				.submenu = 0,
 				.state = SM_PA,
 				.validStates = (const char*[]) {
-					"Pixel-Accurate",
-					"Aspect-Ratio Fit",
-					"Stretched",
+					"精确像素(Pixel-Accurate)",
+					"按比例填充(Aspect-Ratio Fit)",
+					"全屏拉伸(Stretched)",
 				},
 				.nStates = 3
 			},
 			{
-				.title = "Fast forward cap",
+				.title = "加速上限",
 				.data = GUI_V_S("fastForwardCap"),
 				.submenu = 0,
 				.state = 7,
@@ -1154,29 +1154,29 @@ int main(int argc, char* argv[]) {
 				.nStates = 16
 			},
 			{
-				.title = "Filtering",
+				.title = "纹理过滤",
 				.data = GUI_V_S("filterMode"),
 				.submenu = 0,
 				.state = FM_NEAREST,
 				.validStates = (const char*[]) {
-					"None",
-					"Bilinear",
+					"无",
+					"双线性(Bilinear)",
 				},
 				.nStates = 2
 			},
 			{
-				.title = "GPU-accelerated renderer",
+				.title = "GPU渲染",
 				.data = GUI_V_S("hwaccelVideo"),
 				.submenu = 0,
 				.state = 0,
 				.validStates = (const char*[]) {
-					"Off",
-					"On",
+					"关闭",
+					"打开",
 				},
 				.nStates = 2
 			},
 			{
-				.title = "Hi-res scaling (requires GPU rendering)",
+				.title = "高清缩放(需GPU渲染)",
 				.data = GUI_V_S("videoScale"),
 				.submenu = 0,
 				.state = 0,
@@ -1199,13 +1199,13 @@ int main(int argc, char* argv[]) {
 				.nStates = 6
 			},
 			{
-				.title = "Use built-in brightness sensor for Boktai",
+				.title = "为<我们的太阳>使用内置亮度传感器",
 				.data = GUI_V_S("useLightSensor"),
 				.submenu = 0,
 				.state = illuminanceAvailable,
 				.validStates = (const char*[]) {
-					"Off",
-					"On",
+					"关闭",
+					"打开",
 				},
 				.nStates = 2
 			},

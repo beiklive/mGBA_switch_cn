@@ -57,13 +57,13 @@ static const struct mInputPlatformInfo _mGUIKeyInfo = {
 		"Down",
 		"Left",
 		"Right",
-		[mGUI_INPUT_INCREASE_BRIGHTNESS] = "Increase solar brightness",
-		[mGUI_INPUT_DECREASE_BRIGHTNESS] = "Decrease solar brightness",
-		[mGUI_INPUT_SCREEN_MODE] = "Screen mode",
-		[mGUI_INPUT_SCREENSHOT] = "Take screenshot",
-		[mGUI_INPUT_FAST_FORWARD_HELD] = "Fast forward (held)",
-		[mGUI_INPUT_FAST_FORWARD_TOGGLE] = "Fast forward (toggle)",
-		[mGUI_INPUT_MUTE_TOGGLE] = "Mute (toggle)",
+		[mGUI_INPUT_INCREASE_BRIGHTNESS] = "增强太阳光亮度",
+		[mGUI_INPUT_DECREASE_BRIGHTNESS] = "减弱太阳光亮度",
+		[mGUI_INPUT_SCREEN_MODE] = "切换屏幕模式",
+		[mGUI_INPUT_SCREENSHOT] = "截图",
+		[mGUI_INPUT_FAST_FORWARD_HELD] = "加速 (按住)",
+		[mGUI_INPUT_FAST_FORWARD_TOGGLE] = "加速 (切换)",
+		[mGUI_INPUT_MUTE_TOGGLE] = "静音 (切换)",
 	},
 	.nKeys = GUI_INPUT_MAX
 };
@@ -320,7 +320,7 @@ static void _updateLoading(size_t read, size_t size, void* context) {
 	if (runner->params.guiPrepare) {
 		runner->params.guiPrepare();
 	}
-	GUIFontPrintf(runner->params.font, runner->params.width / 2, (GUIFontHeight(runner->params.font) + runner->params.height) / 2, GUI_ALIGN_HCENTER, 0xFFFFFFFF, "Loading...%i%%", 100 * read / size);
+	GUIFontPrintf(runner->params.font, runner->params.width / 2, (GUIFontHeight(runner->params.font) + runner->params.height) / 2, GUI_ALIGN_HCENTER, 0xFFFFFFFF, "加载中...%i%%", 100 * read / size);
 	if (runner->params.guiFinish) {
 		runner->params.guiFinish();
 	}
@@ -337,61 +337,61 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 		.screenshotId = 0
 	};
 	struct GUIMenu pauseMenu = {
-		.title = "Game Paused",
+		.title = "游戏已暂停",
 		.index = 0,
 		.background = &runner->background.d
 	};
 	struct GUIMenu stateSaveMenu = {
-		.title = "Save state",
+		.title = "保存状态",
 		.index = 0,
 		.background = &drawState.d
 	};
 	struct GUIMenu stateLoadMenu = {
-		.title = "Load state",
+		.title = "读取状态",
 		.index = 0,
 		.background = &drawState.d
 	};
 	GUIMenuItemListInit(&pauseMenu.items, 0);
 	GUIMenuItemListInit(&stateSaveMenu.items, 9);
 	GUIMenuItemListInit(&stateLoadMenu.items, 10);
-	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", .data = GUI_V_U(RUNNER_CONTINUE) };
-	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "abcdefghijklmnopqrstuvwxyz", .submenu = &stateSaveMenu };
-	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "!@#$%^&*()_+-=[]{}|;:,.<>?/", .submenu = &stateLoadMenu };
+	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "返回游戏", .data = GUI_V_U(RUNNER_CONTINUE) };
+	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "快速存档", .submenu = &stateSaveMenu };
+	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "快速读档", .submenu = &stateLoadMenu };
 
-	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "State 1", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(1)) };
-	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "State 2", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(2)) };
-	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "State 3", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(3)) };
-	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "State 4", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(4)) };
-	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "State 5", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(5)) };
-	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "State 6", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(6)) };
-	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "State 7", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(7)) };
-	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "State 8", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(8)) };
-	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "State 9", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(9)) };
+	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "状态 1", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(1)) };
+	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "状态 2", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(2)) };
+	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "状态 3", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(3)) };
+	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "状态 4", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(4)) };
+	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "状态 5", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(5)) };
+	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "状态 6", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(6)) };
+	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "状态 7", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(7)) };
+	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "状态 8", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(8)) };
+	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "状态 9", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(9)) };
 
-	*GUIMenuItemListAppend(&stateLoadMenu.items) = (struct GUIMenuItem) { .title = "Autosave", .data = GUI_V_U(RUNNER_LOAD_STATE | RUNNER_STATE(0)) };
-	*GUIMenuItemListAppend(&stateLoadMenu.items) = (struct GUIMenuItem) { .title = "State 1", .data = GUI_V_U(RUNNER_LOAD_STATE | RUNNER_STATE(1)) };
-	*GUIMenuItemListAppend(&stateLoadMenu.items) = (struct GUIMenuItem) { .title = "State 2", .data = GUI_V_U(RUNNER_LOAD_STATE | RUNNER_STATE(2)) };
-	*GUIMenuItemListAppend(&stateLoadMenu.items) = (struct GUIMenuItem) { .title = "State 3", .data = GUI_V_U(RUNNER_LOAD_STATE | RUNNER_STATE(3)) };
-	*GUIMenuItemListAppend(&stateLoadMenu.items) = (struct GUIMenuItem) { .title = "State 4", .data = GUI_V_U(RUNNER_LOAD_STATE | RUNNER_STATE(4)) };
-	*GUIMenuItemListAppend(&stateLoadMenu.items) = (struct GUIMenuItem) { .title = "State 5", .data = GUI_V_U(RUNNER_LOAD_STATE | RUNNER_STATE(5)) };
-	*GUIMenuItemListAppend(&stateLoadMenu.items) = (struct GUIMenuItem) { .title = "State 6", .data = GUI_V_U(RUNNER_LOAD_STATE | RUNNER_STATE(6)) };
-	*GUIMenuItemListAppend(&stateLoadMenu.items) = (struct GUIMenuItem) { .title = "State 7", .data = GUI_V_U(RUNNER_LOAD_STATE | RUNNER_STATE(7)) };
-	*GUIMenuItemListAppend(&stateLoadMenu.items) = (struct GUIMenuItem) { .title = "State 8", .data = GUI_V_U(RUNNER_LOAD_STATE | RUNNER_STATE(8)) };
-	*GUIMenuItemListAppend(&stateLoadMenu.items) = (struct GUIMenuItem) { .title = "State 9", .data = GUI_V_U(RUNNER_LOAD_STATE | RUNNER_STATE(9)) };
+	*GUIMenuItemListAppend(&stateLoadMenu.items) = (struct GUIMenuItem) { .title = "自动存档", .data = GUI_V_U(RUNNER_LOAD_STATE | RUNNER_STATE(0)) };
+	*GUIMenuItemListAppend(&stateLoadMenu.items) = (struct GUIMenuItem) { .title = "状态 1", .data = GUI_V_U(RUNNER_LOAD_STATE | RUNNER_STATE(1)) };
+	*GUIMenuItemListAppend(&stateLoadMenu.items) = (struct GUIMenuItem) { .title = "状态 2", .data = GUI_V_U(RUNNER_LOAD_STATE | RUNNER_STATE(2)) };
+	*GUIMenuItemListAppend(&stateLoadMenu.items) = (struct GUIMenuItem) { .title = "状态 3", .data = GUI_V_U(RUNNER_LOAD_STATE | RUNNER_STATE(3)) };
+	*GUIMenuItemListAppend(&stateLoadMenu.items) = (struct GUIMenuItem) { .title = "状态 4", .data = GUI_V_U(RUNNER_LOAD_STATE | RUNNER_STATE(4)) };
+	*GUIMenuItemListAppend(&stateLoadMenu.items) = (struct GUIMenuItem) { .title = "状态 5", .data = GUI_V_U(RUNNER_LOAD_STATE | RUNNER_STATE(5)) };
+	*GUIMenuItemListAppend(&stateLoadMenu.items) = (struct GUIMenuItem) { .title = "状态 6", .data = GUI_V_U(RUNNER_LOAD_STATE | RUNNER_STATE(6)) };
+	*GUIMenuItemListAppend(&stateLoadMenu.items) = (struct GUIMenuItem) { .title = "状态 7", .data = GUI_V_U(RUNNER_LOAD_STATE | RUNNER_STATE(7)) };
+	*GUIMenuItemListAppend(&stateLoadMenu.items) = (struct GUIMenuItem) { .title = "状态 8", .data = GUI_V_U(RUNNER_LOAD_STATE | RUNNER_STATE(8)) };
+	*GUIMenuItemListAppend(&stateLoadMenu.items) = (struct GUIMenuItem) { .title = "状态 9", .data = GUI_V_U(RUNNER_LOAD_STATE | RUNNER_STATE(9)) };
 
 	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "截图", .data = GUI_V_U(RUNNER_SCREENSHOT) };
 	if (runner->params.getText) {
 		*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "金手指", .data = GUI_V_U(RUNNER_CHEATS) };
 	}
 	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "设置", .data = GUI_V_U(RUNNER_CONFIG) };
-	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "口袋妖怪 口袋妖怪魅影 v5.0口袋妖怪限可能 DP.gba", .data = GUI_V_U(RUNNER_RESET) };
-	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "退出.game+MIN", .data = GUI_V_U(RUNNER_EXIT) };
+	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "重置游戏", .data = GUI_V_U(RUNNER_RESET) };
+	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "退出游戏", .data = GUI_V_U(RUNNER_EXIT) };
 
 	runner->params.drawStart();
 	if (runner->params.guiPrepare) {
 		runner->params.guiPrepare();
 	}
-	GUIFontPrint(runner->params.font, runner->params.width / 2, (GUIFontHeight(runner->params.font) + runner->params.height) / 2, GUI_ALIGN_HCENTER, 0xFFFFFFFF, "Loading...");
+	GUIFontPrint(runner->params.font, runner->params.width / 2, (GUIFontHeight(runner->params.font) + runner->params.height) / 2, GUI_ALIGN_HCENTER, 0xFFFFFFFF, "加载中...");
 	if (runner->params.guiFinish) {
 		runner->params.guiFinish();
 	}
@@ -433,7 +433,7 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 
 	if (!found) {
 		mLOG(GUI_RUNNER, WARN, "Failed to find core for %s!", path);
-		GUIShowMessageBox(&runner->params, GUI_MESSAGE_BOX_OK, 240, "Load failed!");
+		GUIShowMessageBox(&runner->params, GUI_MESSAGE_BOX_OK, 240, "无法加载所选游戏!");
 		return;
 	}
 	if (runner->core->platform(runner->core) == mPLATFORM_GBA) {
