@@ -12,6 +12,8 @@
 
 // 包含OpenGL ES 3.0头文件，用于GPU渲染
 #include <GLES3/gl3.h>
+#include "font-cn.h"
+
 
 // 定义字形高度为24像素
 #define GLYPH_HEIGHT 24
@@ -21,6 +23,15 @@
 #define CELL_WIDTH 32
 // 定义最大字形数量为1024个
 #define MAX_GLYPHS 1024
+
+
+/* 添加中文相关定义 */
+#define CN_GLYPHS_START 0x4E00      // 常用汉字起始编码
+#define CN_GLYPHS_COUNT 6763        // GB2312常用汉字数量
+#define CN_CELLS_PER_ROW 128        // 中文字体纹理每行单元格数
+#define CN_CELL_SIZE 32             // 中文字符单元格大小（像素）
+
+
 
 // 定义四边形顶点的偏移坐标（用于GPU渲染，范围0-1）
 static const GLfloat _offsets[] = {
@@ -48,7 +59,7 @@ static const char* const _vertexShader =
 
 	"void main() {\n"
 	// 计算纹理坐标：(字形位置 + 偏移 * 尺寸) / 512（纹理大小）
-	"	texCoord = (glyph + offset * dims) / 512.0;\n"
+	"	texCoord = (glyph + offset * dims) / vec2(4096.0, 2208.0);\n"
 	// 应用变换矩阵并缩放偏移
 	"	vec2 scaledOffset = (transform * (offset * 2.0 - vec2(1.0)) + vec2(1.0)) / 2.0 * dims;\n"
 	"	fragColor = color;\n"
@@ -175,10 +186,13 @@ struct GUIFont* GUIFontCreate(void) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	// 从资源文件加载字体纹理
-	if (!_loadTexture("romfs:/font-new.png")) {
-		GUIFontDestroy(font);
-		return NULL;
-	}
+	if (!_loadTexture("romfs:/font-cn.png")) {
+        if (!_loadTexture("romfs:/font-new.png")) {
+            GUIFontDestroy(font);
+            return NULL;
+        }
+    }
+
 
 	font->currentGlyph = 0;
 	// 创建着色器程序
@@ -331,12 +345,18 @@ void GUIFontDestroy(struct GUIFont* font) {
 // 获取字体的高度（单位：像素）
 unsigned GUIFontHeight(const struct GUIFont* font) {
 	UNUSED(font);
-	return GLYPH_HEIGHT;
+	return CELL_WIDTH;
 }
 
 // 获取单个字形的宽度
 unsigned GUIFontGlyphWidth(const struct GUIFont* font, uint32_t glyph) {
 	UNUSED(font);
+	/* 中文字符固定宽度 */
+    if (glyph >= CN_GLYPHS_START && glyph < CHINESE_GLYPHS_FINISH) {
+        return 26;
+    }
+    
+
 	// 如果字符代码超过ASCII范围，用'?'替代
 	if (glyph > 0x7F) {
 		glyph = '?';
@@ -367,15 +387,87 @@ void GUIFontIconMetrics(const struct GUIFont* font, enum GUIIcon icon, unsigned*
 		}
 	}
 }
+// 二分查找实现（假设映射表已按unicode升序排序）
+static const ChineseGlyphInfo* binary_search_chinese_glyph(uint32_t unicode) {
+    int left = 0;
+    int right = CHINESE_GLYPH_COUNT - 1;
+    
+    while (left <= right) {
+        int mid = left + (right - left) / 2;
+        uint32_t mid_unicode = chinese_glyphs[mid].unicode;
+        
+        if (mid_unicode == unicode) {
+            return &chinese_glyphs[mid];
+        } else if (mid_unicode < unicode) {
+            left = mid + 1;
+        } else {
+            right = mid - 1;
+        }
+    }
+    return NULL;
+}
 
-// 添加一个字形到当前批处理
-void GUIFontDrawGlyph(struct GUIFont* font, int x, int y, uint32_t color, uint32_t glyph) {
-	// 如果字符代码超过ASCII范围，用'?'替代
-	if (glyph > 0x7F) {
-		glyph = '?';
+void GUIFontDrawGlyph(struct GUIFont* font, int x, int y, uint32_t color, uint32_t unicode) {
+    struct GUIFontGlyphMetric metric;
+    
+
+	// printf("(U+%04X) (x: %d, y: %d)\n", unicode, x, y);
+	if (unicode >= CN_GLYPHS_START && unicode < CHINESE_GLYPHS_FINISH) 
+	{
+		const ChineseGlyphInfo* cn_info = binary_search_chinese_glyph(unicode);
+		if (cn_info != NULL) {
+			// printf("find cn_info: U+%04X (%u) (x:%d, y:%d)\n", cn_info->unicode, cn_info->unicode, cn_info->tex_x, cn_info->tex_y);
+			/* 简单的中文字符度量 - 固定宽度 */
+			metric.width = 24;
+			metric.height = 24;
+			metric.padding.left = 4;
+			metric.padding.right = 4;
+			metric.padding.top = 4;
+			metric.padding.bottom = 2;
+			
+			if (font->currentGlyph >= MAX_GLYPHS) {
+				GUIFontDrawSubmit(font);
+			}
+			
+			int offset = font->currentGlyph;
+			int tex_row = cn_info->tex_y;
+			int tex_col = cn_info->tex_x;
+			
+			
+			// printf("[DEBUG] Unicode: U+%04X (%u) (x:%d, y:%d)\n", unicode, unicode, tex_col, tex_row);
+			
+			/* 使用中文字符纹理坐标 */
+			font->originData[offset][0] = x;
+			font->originData[offset][1] = y - CELL_WIDTH + metric.padding.top;
+			font->originData[offset][2] = 0;
+			font->glyphData[offset][0] = tex_col;
+			font->glyphData[offset][1] = tex_row; /* 中文字符在纹理下半部分 */
+			font->dimsData[offset][0] = CELL_WIDTH;
+			font->dimsData[offset][1] = CELL_WIDTH;
+			font->transformData[0][offset][0] = 1.0f;
+			font->transformData[0][offset][1] = 0.0f;
+			font->transformData[1][offset][0] = 0.0f;
+			font->transformData[1][offset][1] = 1.0f;
+			font->colorData[offset][0] = (color & 0xFF) / 255.0f;
+			font->colorData[offset][1] = ((color >> 8) & 0xFF) / 255.0f;
+			font->colorData[offset][2] = ((color >> 16) & 0xFF) / 255.0f;
+			font->colorData[offset][3] = ((color >> 24) & 0xFF) / 255.0f;
+			
+			++font->currentGlyph;
+			return;
+		}
+		else if (unicode > 0x7F) {
+			/* 其他非ASCII字符显示为问号 */
+			unicode = '?';
+		}
 	}
-	// 获取字形的指标信息（padding、宽度等）
-	struct GUIFontGlyphMetric metric = defaultFontMetrics[glyph];
+	else if (unicode > 0x7F) {
+		/* 其他非ASCII字符显示为问号 */
+		unicode = '?';
+	}
+    
+    /* 原有的英文字符处理逻辑 */
+    metric = defaultFontMetrics[unicode];
 
 	// 如果批处理已满，提交当前批处理
 	if (font->currentGlyph >= MAX_GLYPHS) {
@@ -390,8 +482,8 @@ void GUIFontDrawGlyph(struct GUIFont* font, int x, int y, uint32_t color, uint32
 	font->originData[offset][2] = 0;
 	
 	// 计算字形在纹理中的位置（16x16网格布局）
-	font->glyphData[offset][0] = (glyph & 15) * CELL_WIDTH + metric.padding.left * 2;
-	font->glyphData[offset][1] = (glyph >> 4) * CELL_HEIGHT + metric.padding.top * 2;
+	font->glyphData[offset][0] = (unicode & 15) * CELL_WIDTH + metric.padding.left * 2;
+	font->glyphData[offset][1] = (unicode >> 4) * CELL_HEIGHT + metric.padding.top * 2;
 	
 	// 设置字形的尺寸（考虑padding）
 	font->dimsData[offset][0] = CELL_WIDTH - (metric.padding.left + metric.padding.right) * 2;
@@ -590,7 +682,7 @@ void GUIFontDrawSubmit(struct GUIFont* font) {
 	glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, font->currentGlyph);
 
 	// 第二次绘制：绘制彩色文本（使用高cutoff值）
-	glUniform1f(font->cutoffLocation, 0.7f);
+	glUniform1f(font->cutoffLocation, 0.5f);
 	glUniform3f(font->colorModulusLocation, 1.f, 1.f, 1.f); // 白色调制
 	glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, font->currentGlyph);
 

@@ -379,13 +379,13 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 	*GUIMenuItemListAppend(&stateLoadMenu.items) = (struct GUIMenuItem) { .title = "State 8", .data = GUI_V_U(RUNNER_LOAD_STATE | RUNNER_STATE(8)) };
 	*GUIMenuItemListAppend(&stateLoadMenu.items) = (struct GUIMenuItem) { .title = "State 9", .data = GUI_V_U(RUNNER_LOAD_STATE | RUNNER_STATE(9)) };
 
-	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "Take screenshot", .data = GUI_V_U(RUNNER_SCREENSHOT) };
+	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "截图", .data = GUI_V_U(RUNNER_SCREENSHOT) };
 	if (runner->params.getText) {
-		*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "Cheats", .data = GUI_V_U(RUNNER_CHEATS) };
+		*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "金手指", .data = GUI_V_U(RUNNER_CHEATS) };
 	}
-	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "Configure", .data = GUI_V_U(RUNNER_CONFIG) };
-	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "Reset game", .data = GUI_V_U(RUNNER_RESET) };
-	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "Exit game", .data = GUI_V_U(RUNNER_EXIT) };
+	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "设置", .data = GUI_V_U(RUNNER_CONFIG) };
+	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "口袋妖怪 口袋妖怪魅影 v5.0口袋妖怪限可能 DP.gba", .data = GUI_V_U(RUNNER_RESET) };
+	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "退出.game+MIN", .data = GUI_V_U(RUNNER_EXIT) };
 
 	runner->params.drawStart();
 	if (runner->params.guiPrepare) {
