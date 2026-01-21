@@ -354,9 +354,9 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 	GUIMenuItemListInit(&pauseMenu.items, 0);
 	GUIMenuItemListInit(&stateSaveMenu.items, 9);
 	GUIMenuItemListInit(&stateLoadMenu.items, 10);
-	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "Unpause", .data = GUI_V_U(RUNNER_CONTINUE) };
-	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "Save state", .submenu = &stateSaveMenu };
-	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "Load state", .submenu = &stateLoadMenu };
+	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", .data = GUI_V_U(RUNNER_CONTINUE) };
+	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "abcdefghijklmnopqrstuvwxyz", .submenu = &stateSaveMenu };
+	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "!@#$%^&*()_+-=[]{}|;:,.<>?/", .submenu = &stateLoadMenu };
 
 	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "State 1", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(1)) };
 	*GUIMenuItemListAppend(&stateSaveMenu.items) = (struct GUIMenuItem) { .title = "State 2", .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(2)) };

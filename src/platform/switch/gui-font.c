@@ -353,7 +353,7 @@ unsigned GUIFontGlyphWidth(const struct GUIFont* font, uint32_t glyph) {
 	UNUSED(font);
 	/* 中文字符固定宽度 */
     if (glyph >= CN_GLYPHS_START && glyph < CHINESE_GLYPHS_FINISH) {
-        return 26;
+        return 28;
     }
     
 
@@ -418,12 +418,12 @@ void GUIFontDrawGlyph(struct GUIFont* font, int x, int y, uint32_t color, uint32
 		if (cn_info != NULL) {
 			// printf("find cn_info: U+%04X (%u) (x:%d, y:%d)\n", cn_info->unicode, cn_info->unicode, cn_info->tex_x, cn_info->tex_y);
 			/* 简单的中文字符度量 - 固定宽度 */
-			metric.width = 24;
-			metric.height = 24;
-			metric.padding.left = 4;
-			metric.padding.right = 4;
+			metric.width = 14;
+			metric.height = 12;
+			metric.padding.left = 2;
+			metric.padding.right = 2;
 			metric.padding.top = 4;
-			metric.padding.bottom = 2;
+			metric.padding.bottom = 4;
 			
 			if (font->currentGlyph >= MAX_GLYPHS) {
 				GUIFontDrawSubmit(font);
@@ -438,12 +438,12 @@ void GUIFontDrawGlyph(struct GUIFont* font, int x, int y, uint32_t color, uint32
 			
 			/* 使用中文字符纹理坐标 */
 			font->originData[offset][0] = x;
-			font->originData[offset][1] = y - CELL_WIDTH + metric.padding.top;
+			font->originData[offset][1] = y - CELL_WIDTH + 9;
 			font->originData[offset][2] = 0;
-			font->glyphData[offset][0] = tex_col;
-			font->glyphData[offset][1] = tex_row; /* 中文字符在纹理下半部分 */
-			font->dimsData[offset][0] = CELL_WIDTH;
-			font->dimsData[offset][1] = CELL_WIDTH;
+			font->glyphData[offset][0] = tex_col + metric.padding.left;
+			font->glyphData[offset][1] = tex_row + metric.padding.top; /* 中文字符在纹理下半部分 */
+			font->dimsData[offset][0] = CELL_WIDTH - (metric.padding.left + metric.padding.right);
+			font->dimsData[offset][1] = CELL_HEIGHT - (metric.padding.top + metric.padding.bottom);
 			font->transformData[0][offset][0] = 1.0f;
 			font->transformData[0][offset][1] = 0.0f;
 			font->transformData[1][offset][0] = 0.0f;
@@ -456,7 +456,7 @@ void GUIFontDrawGlyph(struct GUIFont* font, int x, int y, uint32_t color, uint32
 			++font->currentGlyph;
 			return;
 		}
-		else if (unicode > 0x7F) {
+		else{
 			/* 其他非ASCII字符显示为问号 */
 			unicode = '?';
 		}
@@ -478,16 +478,16 @@ void GUIFontDrawGlyph(struct GUIFont* font, int x, int y, uint32_t color, uint32
 
 	// 设置字形的屏幕位置（原点）
 	font->originData[offset][0] = x;
-	font->originData[offset][1] = y - GLYPH_HEIGHT + metric.padding.top * 2;
+	font->originData[offset][1] = y - CELL_WIDTH + 5 * 2;
 	font->originData[offset][2] = 0;
 	
 	// 计算字形在纹理中的位置（16x16网格布局）
-	font->glyphData[offset][0] = (unicode & 15) * CELL_WIDTH + metric.padding.left * 2;
-	font->glyphData[offset][1] = (unicode >> 4) * CELL_HEIGHT + metric.padding.top * 2;
+	font->glyphData[offset][0] = (unicode & 15) * CELL_WIDTH + metric.padding.left;
+	font->glyphData[offset][1] = (unicode >> 4) * CELL_HEIGHT + metric.padding.top;
 	
 	// 设置字形的尺寸（考虑padding）
-	font->dimsData[offset][0] = CELL_WIDTH - (metric.padding.left + metric.padding.right) * 2;
-	font->dimsData[offset][1] = CELL_HEIGHT - (metric.padding.top + metric.padding.bottom) * 2;
+	font->dimsData[offset][0] = CELL_WIDTH - (metric.padding.left + metric.padding.right);
+	font->dimsData[offset][1] = CELL_HEIGHT - (metric.padding.top + metric.padding.bottom);
 	
 	// 设置变换矩阵为单位矩阵（无变换）
 	font->transformData[0][offset][0] = 1.0f;
@@ -676,7 +676,7 @@ void GUIFontDrawSubmit(struct GUIFont* font) {
 	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * 4 * font->currentGlyph, font->colorData);
 
 	// 第一次绘制：绘制黑色阴影（使用低cutoff值）
-	glUniform1f(font->cutoffLocation, 0.1f);
+	glUniform1f(font->cutoffLocation, 0.3f);
 	glUniform3f(font->colorModulusLocation, 0.f, 0.f, 0.f); // 黑色
 	// 使用实例化绘制：每个实例一个四边形（4个顶点）
 	glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, font->currentGlyph);
