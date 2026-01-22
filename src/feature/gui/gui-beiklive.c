@@ -30,7 +30,7 @@ enum BKGUIAction{
 
 void mGUIShowMapName(struct mGUIRunner* runner) {
     char *gameName = runner->core->dirs.baseName;
-    char* mapped_name = bk_config_get(gameName);
+    char* mapped_name = NULL;
     char* gameName_title = NULL;
     char* mapped_name_title = NULL;
 
@@ -42,7 +42,7 @@ void mGUIShowMapName(struct mGUIRunner* runner) {
 
     // UI循环处理按键和UI更新
     while(true){
-
+        mapped_name = bk_config_get(gameName);
         gameName_title = bk_util_str_concatenate_multiple(2, "文件名:", gameName);
         *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
                 .title = gameName_title,
@@ -63,12 +63,12 @@ void mGUIShowMapName(struct mGUIRunner* runner) {
             .title = "删除映射(当前游戏)",
             .data = GUI_V_U(BK_CONFIG_STATUS_2),
         };
-            *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+        *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
             .title = "删除映射(所有游戏)",
             .data = GUI_V_U(BK_CONFIG_STATUS_3),
         };
         *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-            .title = "取消",
+            .title = "返回",
             .data = GUI_V_V,
         };
 
@@ -77,6 +77,10 @@ void mGUIShowMapName(struct mGUIRunner* runner) {
 		enum GUIMenuExitReason reason = GUIShowMenu(&runner->params, &menu, &item);
 
         if (reason != GUI_MENU_EXIT_ACCEPT || GUIVariantIsVoid(item->data)) {
+            GUIMenuItemListClear(&menu.items);
+            free(mapped_name);
+            free(gameName_title);
+            free(mapped_name_title);
 			break;
 		}
         enum BKGUIAction action = (enum BKGUIAction) item->data.v.u;
@@ -116,11 +120,11 @@ void mGUIShowMapName(struct mGUIRunner* runner) {
             break;
         }
         GUIMenuItemListClear(&menu.items);
+        free(mapped_name);
         free(gameName_title);
         free(mapped_name_title);
     }
     GUIMenuItemListDeinit(&menu.items);
-    free(mapped_name);
 
 }
 
@@ -147,7 +151,7 @@ void mGUIShowBeiklive(struct mGUIRunner* runner) {
 		.data = GUI_V_U(BK_CONFIG_SAVE),
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "取消",
+		.title = "返回游戏",
 		.data = GUI_V_V,
 	};
 

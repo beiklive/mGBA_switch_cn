@@ -110,6 +110,7 @@ static bool _refreshDirectory(struct GUIParams* params, const char* currentPath,
 			{
 				char* full_mapped_name = bk_util_str_concatenate(mapped_name, extensionn);
 				*GUIMenuItemListAppend(currentFiles) = (struct GUIMenuItem) { .title = name, .mappedTitle = full_mapped_name, .data = GUI_V_U(de->type(de)) };
+				free(mapped_name);
 			}
 			free(basename);
 			free(extensionn);
