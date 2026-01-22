@@ -2,8 +2,9 @@
 #define BEIKLIVE_H
 
 #include <mgba-util/vfs.h>
+#include <mgba-util/gui/font.h>
 #include <stdbool.h>
-
+#include <stdarg.h>
 // ============ 常量定义 ============
 
 #define BK_ORIGIN_NUM 4616
@@ -145,5 +146,8 @@ const bk_config_item_t* bk_config_get_internal_cache(void);
 // ============ 文件名处理函数 ============
 
 bool bk_util_is_valid_rom_extension(const char* filename);
-
+char* bk_util_remove_extension(const char* filename);
+char* bk_util_get_extension(const char* filename);
+char* bk_util_str_concatenate(const char* str1, const char* str2);
+char* bk_util_str_concatenate_multiple(int count, ...);
 #endif

@@ -99,8 +99,22 @@ static bool _refreshDirectory(struct GUIParams* params, const char* currentPath,
 		// 检测后缀如果是游戏或者游戏压缩包，则尝试映射名称
 		if(bk_util_is_valid_rom_extension(name))
 		{
-			char* mapped_name = bk_config_get(name);
-			*GUIMenuItemListAppend(currentFiles) = (struct GUIMenuItem) { .title = name, .mappedTitle = mapped_name, .data = GUI_V_U(de->type(de)) };
+			char* basename = bk_util_remove_extension(name);
+			char* extensionn = bk_util_get_extension(name);
+			char* mapped_name = bk_config_get(basename);
+			if(mapped_name == NULL)
+			{
+				*GUIMenuItemListAppend(currentFiles) = (struct GUIMenuItem) { .title = name, .mappedTitle = NULL, .data = GUI_V_U(de->type(de)) };
+			}
+			else
+			{
+				char* full_mapped_name = bk_util_str_concatenate(mapped_name, extensionn);
+				*GUIMenuItemListAppend(currentFiles) = (struct GUIMenuItem) { .title = name, .mappedTitle = full_mapped_name, .data = GUI_V_U(de->type(de)) };
+			}
+			free(basename);
+			free(extensionn);
+			basename = NULL;
+			extensionn = NULL;
 		}
 		else
 		{

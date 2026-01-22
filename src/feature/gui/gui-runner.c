@@ -9,6 +9,7 @@
 #include <mgba/core/serialize.h>
 #include "feature/gui/gui-config.h"
 #include "feature/gui/cheats.h"
+#include "feature/gui/gui-beiklive.h"
 #include <mgba/internal/gba/gba.h>
 #include <mgba/internal/gba/input.h>
 #include <mgba/gba/interface.h>
@@ -35,6 +36,7 @@ enum {
 	RUNNER_LOAD_STATE,
 	RUNNER_SCREENSHOT,
 	RUNNER_CONFIG,
+	RUNNER_BEIKLIVE,
 	RUNNER_RESET,
 	RUNNER_CHEATS,
 	RUNNER_COMMAND_MASK = 0xFFFF
@@ -351,6 +353,7 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 		.index = 0,
 		.background = &drawState.d
 	};
+
 	GUIMenuItemListInit(&pauseMenu.items, 0);
 	GUIMenuItemListInit(&stateSaveMenu.items, 9);
 	GUIMenuItemListInit(&stateLoadMenu.items, 10);
@@ -384,6 +387,7 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 		*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "金手指", .data = GUI_V_U(RUNNER_CHEATS) };
 	}
 	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "设置", .data = GUI_V_U(RUNNER_CONFIG) };
+	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "魔改功能", .data = GUI_V_U(RUNNER_BEIKLIVE) };
 	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "重置游戏", .data = GUI_V_U(RUNNER_RESET) };
 	*GUIMenuItemListAppend(&pauseMenu.items) = (struct GUIMenuItem) { .title = "退出游戏", .data = GUI_V_U(RUNNER_EXIT) };
 
@@ -661,6 +665,9 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 				break;
 			case RUNNER_CONFIG:
 				mGUIShowConfig(runner, runner->configExtra, runner->nConfigExtra);
+				break;
+			case RUNNER_BEIKLIVE:
+				mGUIShowBeiklive(runner);
 				break;
 			case RUNNER_CHEATS:
 				mGUIShowCheats(runner);

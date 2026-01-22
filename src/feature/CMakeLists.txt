@@ -9,6 +9,7 @@ set(GUI_FILES
 	gui/cheats.c
 	gui/gui-config.c
 	gui/gui-runner.c
+	gui/gui-beiklive.c
 	gui/remap.c)
 
 source_group("Extra features" FILES ${SOURCE_FILES})

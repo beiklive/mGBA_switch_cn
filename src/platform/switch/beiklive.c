@@ -252,7 +252,7 @@ bool bk_config_reload(void) {
 
 char* bk_config_get(const char* key) {
     if (!key || !g_cache.initialized) {
-        return key;
+        return NULL;
     }
     
     // 在缓存中查找
@@ -262,7 +262,7 @@ char* bk_config_get(const char* key) {
         }
     }
     
-    return key;
+    return NULL;
 }
 
 bool bk_config_set(const char* key, const char* value) {
@@ -619,4 +619,162 @@ bool bk_util_is_valid_rom_extension(const char* filename) {
     }
 
     return has_valid_extension;
+}
+
+/**
+ * 去除文件后缀，返回文件名称（不含后缀）
+ * @param filename 完整文件名
+ * @return 去除后缀的文件名（需要调用者释放内存）
+ */
+char* bk_util_remove_extension(const char* filename) {
+    if (filename == NULL) {
+        return NULL;
+    }
+    
+    // 查找最后一个点（后缀分隔符）的位置
+    const char* dot = strrchr(filename, '.');
+    const char* slash = strrchr(filename, '/');  // 处理可能包含路径的情况
+    
+    // 如果没有找到点，或者点在路径分隔符之前，返回整个字符串
+    if (dot == NULL || (slash != NULL && dot < slash)) {
+        char* result = (char*)malloc(strlen(filename) + 1);
+        if (result == NULL) {
+            return NULL;
+        }
+        strcpy(result, filename);
+        return result;
+    }
+    
+    // 计算文件名（不含后缀）的长度
+    size_t name_length = dot - filename;
+    
+    // 分配内存并复制文件名部分
+    char* result = (char*)malloc(name_length + 1);
+    if (result == NULL) {
+        return NULL;
+    }
+    
+    strncpy(result, filename, name_length);
+    result[name_length] = '\0';
+    
+    return result;
+}
+
+/**
+ * 获取文件后缀（包含点）
+ * @param filename 完整文件名
+ * @return 文件后缀（需要调用者释放内存）
+ */
+char* bk_util_get_extension(const char* filename) {
+    if (filename == NULL) {
+        return NULL;
+    }
+    
+    // 查找最后一个点（后缀分隔符）的位置
+    const char* dot = strrchr(filename, '.');
+    const char* slash = strrchr(filename, '/');  // 处理可能包含路径的情况
+#ifdef _WIN32
+    const char* backslash = strrchr(filename, '\\');
+    if (backslash > slash) {
+        slash = backslash;
+    }
+#endif
+    
+    // 如果没有找到点，或者点在路径分隔符之前，返回空字符串
+    if (dot == NULL || (slash != NULL && dot < slash)) {
+        char* result = (char*)malloc(1);
+        if (result == NULL) {
+            return NULL;
+        }
+        result[0] = '\0';
+        return result;
+    }
+    
+    // 分配内存并复制后缀部分（包含点）
+    char* result = (char*)malloc(strlen(dot) + 1);
+    if (result == NULL) {
+        return NULL;
+    }
+    
+    strcpy(result, dot);
+    return result;
+}
+
+/**
+ * 拼接两个字符串（动态分配内存）
+ * @param str1 第一个字符串
+ * @param str2 第二个字符串
+ * @return 拼接后的新字符串（需要调用者释放内存）
+ */
+char* bk_util_str_concatenate(const char* str1, const char* str2) {
+    if (str1 == NULL || str2 == NULL) {
+        return NULL;
+    }
+    
+    // 计算总长度（包括结束符）
+    size_t len1 = strlen(str1);
+    size_t len2 = strlen(str2);
+    size_t total_len = len1 + len2 + 1;
+    
+    // 分配内存
+    char* result = (char*)malloc(total_len);
+    if (result == NULL) {
+        return NULL;
+    }
+    
+    // 复制字符串
+    strcpy(result, str1);
+    strcat(result, str2);
+    
+    return result;
+}
+
+
+/**
+ * 拼接多个字符串（可变参数）
+ * @param count 要拼接的字符串数量
+ * @param ... 要拼接的字符串
+ * @return 拼接后的新字符串（需要调用者释放内存）
+ */
+char* bk_util_str_concatenate_multiple(int count, ...) {
+    if (count <= 0) {
+        char* result = (char*)malloc(1);
+        if (result) result[0] = '\0';
+        return result;
+    }
+    
+    va_list args;
+    va_start(args, count);
+    
+    // 第一步：计算总长度
+    size_t total_len = 1;  // 结束符
+    for (int i = 0; i < count; i++) {
+        const char* str = va_arg(args, const char*);
+        if (str) {
+            total_len += strlen(str);
+        }
+    }
+    
+    // 重置参数列表
+    va_end(args);
+    va_start(args, count);
+    
+    // 第二步：分配内存
+    char* result = (char*)malloc(total_len);
+    if (result == NULL) {
+        va_end(args);
+        return NULL;
+    }
+    
+    // 第三步：拼接字符串
+    result[0] = '\0';  // 确保以null开头
+    for (int i = 0; i < count; i++) {
+        const char* str = va_arg(args, const char*);
+        if (str) {
+            strcat(result, str);
+        }
+    }
+    
+    va_end(args);
+    return result;
 }
