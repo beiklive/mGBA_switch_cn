@@ -239,7 +239,12 @@ static void GUIMenuDraw(struct GUIParams* params, const struct GUIMenu* menu, co
 			color = item->readonly ? 0xD0909090 : 0xFFFFFFFF;
 			GUIFontDrawIcon(params->font, lineHeight * 0.8f, y, GUI_ALIGN_BOTTOM | GUI_ALIGN_RIGHT, GUI_ORIENT_0, color, GUI_ICON_POINTER);
 		}
-		GUIFontPrint(params->font, item->readonly ? lineHeight * 3 / 2 : lineHeight, y, GUI_ALIGN_LEFT, color, item->title);
+		if(NULL == item->mappedTitle)
+		{
+			GUIFontPrint(params->font, item->readonly ? lineHeight * 3 / 2 : lineHeight, y, GUI_ALIGN_LEFT, color, item->title);
+		}else{
+			GUIFontPrint(params->font, item->readonly ? lineHeight * 3 / 2 : lineHeight, y, GUI_ALIGN_LEFT, color, item->mappedTitle);
+		}
 		if (item->validStates && item->validStates[item->state]) {
 			GUIFontPrintf(params->font, params->width - right - 8, y, GUI_ALIGN_RIGHT, color, "%s ", item->validStates[item->state]);
 		}

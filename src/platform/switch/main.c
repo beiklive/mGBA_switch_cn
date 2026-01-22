@@ -21,6 +21,9 @@
 #include <GLES3/gl3.h>
 #include <GLES3/gl31.h>
 
+#include <beiklive/beiklive.h>
+
+
 // 定义自动输入的特殊ID值
 #define AUTO_INPUT 0x4E585031
 // 音频采样缓冲大小（512个样本）
@@ -1262,6 +1265,28 @@ int main(int argc, char* argv[]) {
 			free(buffer[1]);
 		}
 	}
+
+	// ===================beiklive
+	if (!bk_config_init()) {
+        printf("配置管理器初始化失败\n");
+        return 1;
+    }
+    
+
+
+
+
+
+
+
+	// ===================beiklive
+
+
+
+
+
+
+
 
 	// 如果提供了游戏文件，直接运行游戏；否则显示菜单
 	if (argc > 1) {

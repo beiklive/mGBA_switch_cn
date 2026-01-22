@@ -10,6 +10,8 @@
 #include <mgba-util/string.h>
 #include <mgba-util/vfs.h>
 
+#include <beiklive/beiklive.h>
+
 #include <stdlib.h>
 
 #define ITERATION_SIZE 5
@@ -94,7 +96,17 @@ static bool _refreshDirectory(struct GUIParams* params, const char* currentPath,
 		} else {
 			name = strdup(name);
 		}
-		*GUIMenuItemListAppend(currentFiles) = (struct GUIMenuItem) { .title = name, .data = GUI_V_U(de->type(de)) };
+		// 检测后缀如果是游戏或者游戏压缩包，则尝试映射名称
+		if(bk_util_is_valid_rom_extension(name))
+		{
+			char* mapped_name = bk_config_get(name);
+			*GUIMenuItemListAppend(currentFiles) = (struct GUIMenuItem) { .title = name, .mappedTitle = mapped_name, .data = GUI_V_U(de->type(de)) };
+		}
+		else
+		{
+			*GUIMenuItemListAppend(currentFiles) = (struct GUIMenuItem) { .title = name, .mappedTitle = NULL, .data = GUI_V_U(de->type(de)) };
+		}
+
 		++items;
 	}
 	qsort(GUIMenuItemListGetPointer(currentFiles, 1), GUIMenuItemListSize(currentFiles) - 1, sizeof(struct GUIMenuItem), _strpcmp);
@@ -130,7 +142,7 @@ static bool _refreshDirectory(struct GUIParams* params, const char* currentPath,
 			}
 			bool failed = false;
 			if (filterContents) {
-				struct VFile* vf = dir->openFile(dir, testItem->title, O_RDONLY);
+				struct VFile* vf = dir->openFile(dir, testItem->title, O_RDONLY);  // 使用文件名称打开文件
 				if (!vf) {
 					failed = true;
 				} else {
@@ -142,9 +154,14 @@ static bool _refreshDirectory(struct GUIParams* params, const char* currentPath,
 			}
 
 			if (failed) {
-				free((char*) testItem->title);
+				free((char*) testItem->title); // 释放内存
+				if(testItem->mappedTitle)
+				{
+					free((char*) testItem->mappedTitle);  // 释放内存
+				}
 				GUIMenuItemListShift(currentFiles, item, 1);
 			} else {
+				// 前一次玩的游戏文件名称对比
 				if (preselect && strncmp(testItem->title, preselect, PATH_MAX) == 0) {
 					params->fileIndex = item;
 				}
