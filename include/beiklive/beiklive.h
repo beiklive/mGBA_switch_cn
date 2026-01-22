@@ -23,6 +23,22 @@ typedef struct {
     char value[BK_CONFIG_MAX_VALUE_LENGTH];
 } bk_config_item_t;
 
+extern struct mGUIRunner* bk_global_runner;
+
+#define BK_GLOBAL_INT_SET(name, value) \
+    do { \
+        mCoreConfigSetIntValue(&bk_global_runner->config, name, value); \
+    } while(0)
+
+    
+#define BK_GLOBAL_INT_GET(name, outVar) \
+    do { \
+        mCoreConfigGetIntValue(&bk_global_runner->config, name, &(outVar)); \
+    } while(0)
+
+
+
+
 // ============ 初始化与清理函数 ============
 
 /**
@@ -150,4 +166,9 @@ char* bk_util_remove_extension(const char* filename);
 char* bk_util_get_extension(const char* filename);
 char* bk_util_str_concatenate(const char* str1, const char* str2);
 char* bk_util_str_concatenate_multiple(int count, ...);
+
+
+
+// =======绘图函数
+static void _bk_util_draw_game_logo(struct GUIBackground* background, char* filename);
 #endif

@@ -27,7 +27,7 @@ enum BKGUIAction{
 };
 
 
-
+// 名称映射相关功能
 void mGUIShowMapName(struct mGUIRunner* runner) {
     char *gameName = runner->core->dirs.baseName;
     char* mapped_name = NULL;
@@ -168,13 +168,13 @@ void mGUIShowBeiklive(struct mGUIRunner* runner) {
         {
         case BK_CONFIG_MAPNAME:
             /* 跳转到映射界面 */
-            printf("跳转到映射界面\n");
+            // printf("跳转到映射界面\n");
             mGUIShowMapName(runner);
             break;
         case BK_CONFIG_SAVE:
             printf("保存设置\n");
             // 保存数据变量  mCoreConfigSetIntValue
-            // mCoreConfigSetIntValue(&runner->config, "bk.mapname", 1);
+            mCoreConfigSetIntValue(&runner->config, "bk.mapname", 1);
             break;
         default:
             break;

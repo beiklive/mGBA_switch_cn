@@ -22,6 +22,9 @@
 
 #include <sys/time.h>
 
+#include <beiklive/beiklive.h>
+
+
 mLOG_DECLARE_CATEGORY(GUI_RUNNER);
 mLOG_DEFINE_CATEGORY(GUI_RUNNER, "GUI Runner", "gui.runner");
 
@@ -115,55 +118,138 @@ static void _drawBackground(struct GUIBackground* background, void* context) {
 	}
 }
 
+// 绘制状态缩略图/背景的回调函数
 static void _drawState(struct GUIBackground* background, void* id) {
+
+	// 将通用 GUIBackground 转换为 mGBA 专用的背景结构
 	struct mGUIBackground* gbaBackground = (struct mGUIBackground*) background;
+
+	// 从 id 的高 16 位中取出状态槽编号（stateId）
 	unsigned stateId = ((uint32_t) id) >> 16;
+
+	// 仅当平台提供 drawScreenshot 回调时才执行截图绘制逻辑
 	if (gbaBackground->p->drawScreenshot) {
+
+		// 用于保存目标视频宽高
 		unsigned w, h;
-		gbaBackground->p->core->desiredVideoDimensions(gbaBackground->p->core, &w, &h);
+
+		// 从核心获取期望的视频输出尺寸
+		gbaBackground->p->core->desiredVideoDimensions(
+			gbaBackground->p->core, &w, &h
+		);
+
+		// 计算所需像素缓冲区大小（宽 × 高 × 每像素字节数）
 		size_t size = w * h * BYTES_PER_PIXEL;
+
+		// 如果当前缓存大小与期望大小不一致
 		if (size != gbaBackground->imageSize) {
+
+			// 释放旧的像素缓存
 			mappedMemoryFree(gbaBackground->image, gbaBackground->imageSize);
+
+			// 清空指针，等待重新分配
 			gbaBackground->image = NULL;
 		}
-		if (gbaBackground->image && gbaBackground->screenshotId == (stateId | SCREENSHOT_VALID)) {
-			gbaBackground->p->drawScreenshot(gbaBackground->p, gbaBackground->image, w, h, true);
+
+		// 如果已有缓存，并且截图状态是“有效”的当前 stateId
+		if (gbaBackground->image &&
+			gbaBackground->screenshotId == (stateId | SCREENSHOT_VALID)) {
+
+			// 直接绘制缓存中的截图数据
+			gbaBackground->p->drawScreenshot(
+				gbaBackground->p, gbaBackground->image, w, h, true
+			);
+
+			// 已成功绘制，直接返回
 			return;
+
+		// 否则，如果当前状态不是已标记为“无效截图”
 		} else if (gbaBackground->screenshotId != (stateId | SCREENSHOT_INVALID)) {
-			struct VFile* vf = mCoreGetState(gbaBackground->p->core, stateId, false);
+
+			// 从核心中获取该 stateId 对应的存档文件（VFile 抽象）
+			struct VFile* vf = mCoreGetState(
+				gbaBackground->p->core, stateId, false
+			);
+
+			// 像素缓冲区指针
 			color_t* pixels = gbaBackground->image;
+
+			// 若当前尚未分配像素缓冲区
 			if (!pixels) {
+
+				// 使用匿名内存映射分配像素缓存
 				pixels = anonymousMemoryMap(size);
+
+				// 保存到背景结构中
 				gbaBackground->image = pixels;
 				gbaBackground->imageSize = size;
 			}
+
+			// 用于标记 PNG 读取是否成功
 			bool success = false;
+
+			// 如果存档文件存在、是 PNG 格式、并且像素缓冲区可用
 			if (vf && isPNG(vf) && pixels) {
+
+				// 打开 PNG 读取结构
 				png_structp png = PNGReadOpen(vf, PNG_HEADER_BYTES);
+
+				// 创建 PNG 信息结构
 				png_infop info = png_create_info_struct(png);
-				png_infop end = png_create_info_struct(png);
+				png_infop end  = png_create_info_struct(png);
+
+				// 确保 PNG 相关结构创建成功
 				if (png && info && end) {
+
+					// 读取 PNG 头
 					success = PNGReadHeader(png, info);
-					success = success && PNGReadPixels(png, info, pixels, w, h, w);
-					success = success && PNGReadFooter(png, end);
+
+					// 读取 PNG 像素数据到 pixels 缓冲区
+					success = success &&
+						PNGReadPixels(png, info, pixels, w, h, w);
+
+					// 读取 PNG 尾信息
+					success = success &&
+						PNGReadFooter(png, end);
 				}
+
+				// 关闭 PNG 读取并释放相关结构
 				PNGReadClose(png, info, end);
 			}
+
+			// 如果 VFile 存在，关闭文件
 			if (vf) {
 				vf->close(vf);
 			}
+
+			// 如果 PNG 读取成功
 			if (success) {
-				gbaBackground->p->drawScreenshot(gbaBackground->p, pixels, w, h, true);
+
+				// 绘制刚刚解码得到的截图
+				gbaBackground->p->drawScreenshot(
+					gbaBackground->p, pixels, w, h, true
+				);
+
+				// 标记该 stateId 的截图为有效
 				gbaBackground->screenshotId = stateId | SCREENSHOT_VALID;
+
 			} else {
+
+				// 标记该 stateId 的截图为无效（无法读取）
 				gbaBackground->screenshotId = stateId | SCREENSHOT_INVALID;
 			}
 		}
-		if (gbaBackground->p->drawFrame && gbaBackground->screenshotId == (stateId | SCREENSHOT_INVALID)) {
+
+		// 如果存在 drawFrame 回调，并且该状态截图被标记为无效
+		if (gbaBackground->p->drawFrame &&
+			gbaBackground->screenshotId == (stateId | SCREENSHOT_INVALID)) {
+
+			// 回退为绘制当前实时帧作为背景
 			gbaBackground->p->drawFrame(gbaBackground->p, true);
 		}
 	}
 }
+
 
 static void _updateLux(struct GBALuminanceSource* lux) {
 	UNUSED(lux);
@@ -216,6 +302,9 @@ void mGUIInit(struct mGUIRunner* runner, const char* port) {
 	mInputMapInit(&runner->params.keyMap, &_mGUIKeyInfo);
 	mCoreConfigInit(&runner->config, runner->port);
 	// TODO: Do we need to load more defaults?
+	mCoreConfigSetDefaultIntValue(&runner->config, "BK.isFileList", true);
+
+
 	mCoreConfigSetDefaultIntValue(&runner->config, "volume", 0x100);
 	mCoreConfigSetDefaultValue(&runner->config, "idleOptimization", "detect");
 	mCoreConfigSetDefaultIntValue(&runner->config, "autoload", true);
@@ -770,13 +859,16 @@ void mGUIRunloop(struct mGUIRunner* runner) {
 		if (preselect) {
 			++preselect;
 		}
+		BK_GLOBAL_INT_SET("BK.isFolderList", true);
 		if (!GUISelectFile(&runner->params, path, sizeof(path), _testExtensions, NULL, preselect)) {
 			break;
 		}
 		mCoreConfigSetValue(&runner->config, "lastDirectory", runner->params.currentPath);
 		mCoreConfigSetValue(&runner->config, "lastGame", path);
 		mCoreConfigSave(&runner->config);
-		mGUIRun(runner, path);
+
+		BK_GLOBAL_INT_SET("BK.isFolderList", false);
+		mGUIRun(runner, path); // 游戏开始运行
 	}
 }
 

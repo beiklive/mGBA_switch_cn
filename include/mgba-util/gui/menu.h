@@ -9,7 +9,7 @@
 #include <mgba-util/common.h>
 
 CXX_GUARD_START
-
+#include <mgba/core/config.h>
 #include <mgba-util/gui.h>
 #include <mgba-util/vector.h>
 

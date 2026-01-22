@@ -22,7 +22,7 @@
 #include <GLES3/gl31.h>
 
 #include <beiklive/beiklive.h>
-
+struct mGUIRunner* bk_global_runner = NULL;
 
 // 定义自动输入的特殊ID值
 #define AUTO_INPUT 0x4E585031
@@ -1271,8 +1271,8 @@ int main(int argc, char* argv[]) {
         printf("配置管理器初始化失败\n");
         return 1;
     }
-    
-
+    // 获取全局运行器指针
+	bk_global_runner = &runner;
 
 
 

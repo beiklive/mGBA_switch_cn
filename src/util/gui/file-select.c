@@ -52,12 +52,11 @@ static int _strpcmp(const void* a, const void* b) {
 
 static bool _refreshDirectory(struct GUIParams* params, const char* currentPath, struct GUIMenuItemList* currentFiles, bool (*filterName)(const char* name), bool (*filterContents)(struct VFile*), const char* preselect) {
 	_cleanFiles(currentFiles);
-
 	struct VDir* dir = VDirOpen(currentPath);
 	if (!dir) {
 		return false;
 	}
-	*GUIMenuItemListAppend(currentFiles) = (struct GUIMenuItem) { .title = "(返回上层文件夹)" };
+	*GUIMenuItemListAppend(currentFiles) = (struct GUIMenuItem) { .title = "(Up)", .mappedTitle = "(返回上层文件夹)" };
 	size_t i = 0;
 	size_t items = 0;
 	struct VDirEntry* de;
@@ -121,7 +120,6 @@ static bool _refreshDirectory(struct GUIParams* params, const char* currentPath,
 		{
 			*GUIMenuItemListAppend(currentFiles) = (struct GUIMenuItem) { .title = name, .mappedTitle = NULL, .data = GUI_V_U(de->type(de)) };
 		}
-
 		++items;
 	}
 	qsort(GUIMenuItemListGetPointer(currentFiles, 1), GUIMenuItemListSize(currentFiles) - 1, sizeof(struct GUIMenuItem), _strpcmp);
@@ -221,7 +219,6 @@ bool GUISelectFile(struct GUIParams* params, char* outPath, size_t outLen, bool 
 					sep = "";
 				}
 				snprintf(outPath, outLen, "%s%s%s", params->currentPath, sep, item->title);
-
 				struct GUIMenuItemList newFiles;
 				GUIMenuItemListInit(&newFiles, 0);
 				if (!_refreshDirectory(params, outPath, &newFiles, filterName, filterContents, NULL)) {
@@ -252,7 +249,6 @@ bool GUISelectFile(struct GUIParams* params, char* outPath, size_t outLen, bool 
 			menu.index = 0;
 		}
 	}
-
 	_cleanFiles(&menu.items);
 	GUIMenuItemListDeinit(&menu.items);
 	return false;

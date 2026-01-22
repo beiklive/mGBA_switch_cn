@@ -12,6 +12,9 @@
 #include <3ds.h>
 #elif defined(__SWITCH__)
 #include <switch.h>
+#include <beiklive/beiklive.h>
+#include "feature/gui/gui-runner.h"
+
 #endif
 
 DEFINE_VECTOR(GUIMenuItemList, struct GUIMenuItem);
@@ -235,10 +238,19 @@ static void GUIMenuDraw(struct GUIParams* params, const struct GUIMenu* menu, co
 	for (i = state->start; i < GUIMenuItemListSize(&menu->items); ++i) {
 		int color = 0xE0A0A0A0;
 		const struct GUIMenuItem* item = GUIMenuItemListGetConstPointer(&menu->items, i);
+		// 根据当前选择的菜单项改变图标
 		if (i == menu->index) {
 			color = item->readonly ? 0xD0909090 : 0xFFFFFFFF;
+			int isFold = false;
+			BK_GLOBAL_INT_GET("BK.isFolderList", isFold);
+			if(isFold)
+			{
+				printf("当前菜单项: %s, %s\n", item->title, bk_util_is_valid_rom_extension(item->title) ? "游戏文件" : "不是游戏");
+			}
+			// beiklive  可以在这里绘制 背景图片   但是需要提前读取图片到缓存
 			GUIFontDrawIcon(params->font, lineHeight * 0.8f, y, GUI_ALIGN_BOTTOM | GUI_ALIGN_RIGHT, GUI_ORIENT_0, color, GUI_ICON_POINTER);
 		}
+		// 检查是否有映射名称
 		if(NULL == item->mappedTitle)
 		{
 			GUIFontPrint(params->font, item->readonly ? lineHeight * 3 / 2 : lineHeight, y, GUI_ALIGN_LEFT, color, item->title);
