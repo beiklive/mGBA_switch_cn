@@ -590,61 +590,6 @@ static bool bk_string_ends_with_ignore_case(const char* str, const char* suffix)
     
     return true;
 }
-char* bk_util_get_basename_without_extension(const char* filename) {
-    if (!filename) return NULL;
-    
-    // 提取基本文件名（去除路径）
-    const char* basename = filename;
-    
-    // 查找最后一个路径分隔符
-    const char* last_slash = strrchr(filename, '/');
-    const char* last_backslash = strrchr(filename, '\\');
-    
-    // 找到最后一个路径分隔符
-    if (last_slash || last_backslash) {
-        const char* last_separator = last_slash > last_backslash ? last_slash : last_backslash;
-        if (last_separator) {
-            basename = last_separator + 1;
-        }
-    }
-    
-    // 计算不带扩展名的长度
-    size_t basename_len = strlen(basename);
-    
-    // 获取文件扩展名
-    const char* extension = bk_util_get_file_extension(basename);
-    
-    if (!extension) {
-        // 没有有效的扩展名，返回完整文件名
-        char* result = (char*)malloc(basename_len + 1);
-        if (!result) return NULL;
-        strcpy(result, basename);
-        return result;
-    }
-    
-    // 计算扩展名长度（包括点号）
-    size_t ext_len = strlen(extension);
-    
-    // 确保文件名长度足够
-    if (basename_len <= ext_len) {
-        // 文件名太短，可能只有扩展名
-        return NULL;
-    }
-    
-    // 分配内存并复制不带扩展名的文件名
-    char* result = (char*)malloc(basename_len - ext_len + 1);
-    if (!result) {
-        return NULL;
-    }
-    
-    // 复制文件名（不包括扩展名）
-    strncpy(result, basename, basename_len - ext_len);
-    result[basename_len - ext_len] = '\0';
-    
-    return result;
-}
-
-
 
 bool bk_util_is_valid_rom_extension(const char* filename) {
     if (!filename) return false;
@@ -674,32 +619,4 @@ bool bk_util_is_valid_rom_extension(const char* filename) {
     }
 
     return has_valid_extension;
-}
-
-const char* bk_util_get_file_extension(const char* filename) {
-    if (!filename) {
-        return NULL;
-    }
-        // 检查 .gba 扩展名
-    if (bk_string_ends_with_ignore_case(filename, ".gba")) {
-        return ".gba";
-    }
-    // 检查 .zip 扩展名
-    else if (bk_string_ends_with_ignore_case(filename, ".zip")) {
-        return ".zip";
-    }
-    // 检查 .gb 扩展名
-    else if (bk_string_ends_with_ignore_case(filename, ".gb")) {
-        return ".gb";
-    }
-    // 检查 .gbc 扩展名
-    else if (bk_string_ends_with_ignore_case(filename, ".gbc")) {
-        return ".gbc";
-    }
-    // 检查 .sgb 扩展名
-    else if (bk_string_ends_with_ignore_case(filename, ".sgb")) {
-        return ".sgb";
-    }
-
-    return NULL;
 }

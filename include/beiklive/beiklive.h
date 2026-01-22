@@ -144,21 +144,6 @@ const bk_config_item_t* bk_config_get_internal_cache(void);
 
 // ============ 文件名处理函数 ============
 
-/**
- * 检查并提取不带后缀的文件名
- * 检查参数是否以 .gba 或 .zip 结尾（不区分大小写）
- * 如果是，返回不带后缀的文件名，否则返回 NULL
- * @param filename 文件名（可以包含路径）
- * @return 不带后缀的文件名（需要调用者释放内存），不符合条件返回NULL
- */
-char* bk_util_get_basename_without_extension(const char* filename);
 bool bk_util_is_valid_rom_extension(const char* filename);
-/**
- * 获取文件的扩展名（小写形式）
- * 支持 .gba 和 .zip 扩展名（不区分大小写）
- * @param filename 文件名（可以包含路径）
- * @return 扩展名字符串（静态缓冲区，不需要释放），
- *         如果文件扩展名不是 .gba 或 .zip 则返回 NULL
- */
-const char* bk_util_get_file_extension(const char* filename);
+
 #endif
