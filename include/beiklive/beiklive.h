@@ -7,7 +7,9 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <setjmp.h>
+#include <time.h>
 #include "feature/gui/gui-runner.h"
+#include "bk_log.h"
 // ============ 常量定义 ============
 
 // ***********名称映射相关定义
@@ -58,14 +60,6 @@ extern struct mGUIRunner* bk_global_runner;
     } while(0)
 
 
-// 全局log函数
-#define BK_ENABLE_PRINT 1
-
-#if BK_ENABLE_PRINT
-    #define BK_LOG(...) printf(__VA_ARGS__)
-#else
-    #define BK_LOG(...) 
-#endif
 
 
 
@@ -109,5 +103,5 @@ char* bk_util_str_concatenate_multiple(int count, ...);
 // =======绘图函数
 struct VFile* bk_util_open_png(const char* path, int mode);
 void _bk_util_draw_game_logo(struct GUIBackground* background, void*  title);
-
+float bk_calc_insize(unsigned realSize);
 #endif

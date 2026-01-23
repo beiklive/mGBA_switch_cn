@@ -13,7 +13,11 @@ typedef struct {
 
 // 全局配置缓存
 static bk_config_cache_t g_cache = { 0 };
-
+BK_LogConfig g_bk_log_config = {
+    .level = BK_LOG_LEVEL_INFO,
+    .enable_timestamp = 1,
+    .enable_color = 1
+};
 // 初始键值对
 static const char* DEFAULT_CONFIG[] = { "mgba=Switch Game", NULL };
 
@@ -776,12 +780,10 @@ char* bk_util_str_concatenate_multiple(int count, ...) {
 struct VFile* bk_util_open_png(const char* path, int mode) {
 	struct VFile* vf = VFileOpen(path, mode);
 	if (!vf) {
-		BK_LOG("Failed to open PNG file: %s\n", path);
 		return NULL;
 	}
 
 	if (!isPNG(vf)) {
-		BK_LOG("File is not a valid PNG: %s\n", path);
 		vf->close(vf);
 		return NULL;
 	}
@@ -789,14 +791,14 @@ struct VFile* bk_util_open_png(const char* path, int mode) {
 	return vf;
 }
 void _bk_util_draw_game_logo(struct GUIBackground* background, void* title) {
-
+    static int x_pos = 0;
 	struct mGUIBackground* gbaBackground = (struct mGUIBackground*) background;
 	int isFold = true;
 	BK_GLOBAL_INT_GET("BK.isFolderList", isFold);
 	if (true) {
 	// if (isFold & bk_util_is_valid_rom_extension(title)) {
 		// 像素缓冲区指针
-		void* pixels = NULL;
+		color_t* pixels = gbaBackground->image;
 		char* logoPath =
 		    bk_util_str_concatenate_multiple(
 				4,
@@ -806,6 +808,7 @@ void _bk_util_draw_game_logo(struct GUIBackground* background, void* title) {
 				".png"
 			);
 		// 打开 PNG 文件
+        // BK_LOG_INFO("打开PNG文件: %s\n", logoPath);
 		struct VFile* vf = bk_util_open_png(logoPath, O_RDONLY);
 		if (vf) {
 			// 打开 PNG 解析器
@@ -818,13 +821,53 @@ void _bk_util_draw_game_logo(struct GUIBackground* background, void* title) {
 			if (png && info && end) {
 				success = PNGReadHeader(png, info);
 			}
+            // BK_LOG_INFO("PNG文件解析成功: %s\n", success? "true" : "false");
 			// 读取 PNG 像素数据
 			if (success) {
 				unsigned width  = png_get_image_width(png, info);
 				unsigned height = png_get_image_height(png, info);
 				// 修复点 ①：按 RGBA8888 分配内存
-				size_t pixelSize = width * height * 4;
-				pixels = malloc(pixelSize);
+				size_t pixelSize = width * height * BYTES_PER_PIXEL;
+                // 如果当前缓存大小与期望大小不一致
+                if (pixelSize != gbaBackground->imageSize) {
+                    // 释放旧的像素缓存
+                    free(gbaBackground->image);
+                    // 清空指针，等待重新分配
+                    gbaBackground->image = NULL;
+                }
+                if (gbaBackground->image){
+                    int screenWidth = gbaBackground->p->params.width;  
+                    int screenHeight = gbaBackground->p->params.height;
+                    x_pos += 1;
+                    int targetX = x_pos % screenWidth;
+                    int targetY = x_pos % screenHeight;
+                    int targetWidth = screenWidth;
+                    int targetHeight = screenHeight;
+                    gbaBackground->p->drawBKImage(
+                        gbaBackground->p,
+                        gbaBackground->image,
+                        width,
+                        height,
+                        true,
+                        targetX,
+                        targetY,
+                        width,
+                        height
+                    );
+                }
+
+                if (!pixels) {
+                    // 使用匿名内存映射分配像素缓存
+                    pixels = malloc(pixelSize);
+
+                    // 保存到背景结构中
+                    gbaBackground->image = pixels;
+                    gbaBackground->imageSize = pixelSize;
+                }
+
+
+
+                // BK_LOG_INFO("分配内存: %d\n", pixelSize);
 				if (pixels) {
 					success = PNGReadPixels(
 						png,
@@ -847,10 +890,10 @@ void _bk_util_draw_game_logo(struct GUIBackground* background, void* title) {
 			if (success) {
                 int screenWidth = gbaBackground->p->params.width;  
                 int screenHeight = gbaBackground->p->params.height;
-                            
-                // 方案1：填充整个屏幕
-                int targetX = 0;
-                int targetY = 0;
+                x_pos += 1;
+                int targetX = x_pos % 1280;
+                int targetY = x_pos % 720;
+                // BK_LOG_INFO("targetX: %d, targetY: %d\n", targetX, targetY);
                 int targetWidth = screenWidth;
                 int targetHeight = screenHeight;
 				gbaBackground->p->drawBKImage(
@@ -861,22 +904,26 @@ void _bk_util_draw_game_logo(struct GUIBackground* background, void* title) {
 					true,
 					targetX,
 					targetY,
-					targetWidth,
-					targetHeight
+					png_get_image_width(png, info),
+					png_get_image_height(png, info)
 				);
 			}
 			// 关闭 PNG 读取器
 			PNGReadClose(png, info, end);
 			// 关闭文件
 			vf->close(vf);
-			// 修复点 ②：释放像素内存
-			if (pixels) {
-				free(pixels);
-			}
 		}
 		// 修复点 ③：释放路径字符串
 		if (logoPath) {
 			free(logoPath);
 		}
 	}
+}
+
+float bk_calc_insize(unsigned realSize) {
+    unsigned pot = 1;
+    while (pot < realSize) {
+        pot <<= 1;
+    }
+    return (float)realSize / (float)pot;
 }

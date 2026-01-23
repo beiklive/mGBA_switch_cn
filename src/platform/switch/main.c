@@ -465,94 +465,161 @@ static void _gameUnloaded(struct mGUIRunner* runner) {
 	memcpy(&values[3], &vibrationStop, sizeof(rumble.value));
 	hidSendVibrationValues(vibrationDeviceHandles, values, 4);
 }
-
-// 绘制游戏画面纹理到屏幕
-static void _drawTex(struct mGUIRunner* runner, unsigned width, unsigned height, bool faded, bool blendTop) {
-	// 设置视口
+// 将游戏画面纹理绘制到屏幕上的函数
+static void _drawTex(
+	struct mGUIRunner* runner,   // GUI 运行上下文
+	unsigned width,              // 输入纹理宽度（游戏画面宽）
+	unsigned height,             // 输入纹理高度（游戏画面高）
+	bool faded,                  // 是否启用淡化效果
+	bool blendTop                // 是否与上层画面混合
+) {
+	// 设置 OpenGL 视口
+	// (x=0, y=1080-vheight) 表示从屏幕顶部向下绘制
 	glViewport(0, 1080 - vheight, vwidth, vheight);
+
+	// 启用 alpha 混合
 	glEnable(GL_BLEND);
+
+	// 设置混合方式：标准的 alpha 混合
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	// 设置纹理过滤模式
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filterMode == FM_LINEAR ? GL_LINEAR : GL_NEAREST);
+	// 设置纹理放大时的过滤方式
+	// 线性过滤（平滑）或最近邻（像素风）
+	glTexParameteri(
+		GL_TEXTURE_2D,
+		GL_TEXTURE_MAG_FILTER,
+		filterMode == FM_LINEAR ? GL_LINEAR : GL_NEAREST
+	);
 
+	// 使用当前着色器程序
 	glUseProgram(program);
+
+	// 绑定顶点数组对象（包含全屏四边形顶点）
 	glBindVertexArray(vao);
+
+	// 保存输入纹理尺寸为浮点数
 	float inwidth = width;
 	float inheight = height;
 	
-	// 如果启用SGB边框裁剪
+	// 如果启用了 SGB 裁剪，且当前分辨率是 SGB 标准分辨率
 	if (sgbCrop && width == 256 && height == 224) {
+
+		// 使用 Game Boy 实际可视区域尺寸
 		inwidth = GB_VIDEO_HORIZONTAL_PIXELS;
 		inheight = GB_VIDEO_VERTICAL_PIXELS;
 	}
 	
-	// 计算宽高比
+	// 计算输入纹理与视口的宽高比例
 	float aspectX = inwidth / vwidth;
 	float aspectY = inheight / vheight;
+
+	// 最大缩放因子，默认 1（不缩放）
 	float max = 1.f;
 	
-	// 根据屏幕模式计算缩放因子
+	// 根据屏幕显示模式计算缩放方式
 	switch (screenMode) {
+
 	case SM_PA:
-		// 像素精确模式：向下舍入缩放倍数
+		// 像素精确模式（Pixel Accurate）
+		// 选择整数倍缩放，避免像素失真
 		if (aspectX > aspectY) {
 			max = floor(1.f / aspectX);
 		} else {
 			max = floor(1.f / aspectY);
 		}
+
+		// 如果可用缩放倍数 >= 1，直接使用
 		if (max >= 1.f) {
 			break;
 		}
+		// 否则继续执行下一个模式
 		// Fall through
+
 	case SM_AF:
-		// 宽高比适应模式：保持宽高比
+		// 宽高比适应模式（Aspect Fit）
+		// 保持宽高比，画面完整显示
 		if (aspectX > aspectY) {
 			max = 1.f / aspectX;
 		} else {
 			max = 1.f / aspectY;
 		}
 		break;
+
 	case SM_SF:
-		// 拉伸填满模式：不保持宽高比
+		// 拉伸填满模式（Stretch Fill）
+		// 不保持宽高比，完全填充屏幕
 		aspectX = 1.f;
 		aspectY = 1.f;
 		break;
 	}
 
-	// 如果不是拉伸模式，调整宽高比
+	// 如果不是拉伸填满模式
 	if (screenMode != SM_SF) {
+
+		// 重新基于实际纹理尺寸计算宽高比例
 		aspectX = width / (float) vwidth;
 		aspectY = height / (float) vheight;
 	}
 
-	// 应用最大缩放因子
+	// 应用最终缩放因子
 	aspectX *= max;
 	aspectY *= max;
 
-	// 设置着色器uniform变量
+	// 设置纹理采样单元（使用 0 号纹理）
 	glUniform1i(texLocation, 0);
+
+	// 设置输出尺寸比例（用于顶点或片段着色器）
 	glUniform2f(dimsLocation, aspectX, aspectY);
+
+	// 如果使用 PBO（Pixel Buffer Object）
 	if (usePbo) {
+		// 设置输入纹理尺寸相对值（通常用于特殊缩放）
 		glUniform2f(insizeLocation, width / 256.f, height / 256.f);
 	} else {
+		// 否则使用默认值
 		glUniform2f(insizeLocation, 1, 1);
 	}
-	// 根据是否淡化来设置颜色
+
+	// 根据是否淡化来设置颜色和透明度
 	if (!faded) {
-		glUniform4f(colorLocation, 1.0f, 1.0f, 1.0f, blendTop ? 0.5f : 1.0f);
+
+		// 正常亮度
+		glUniform4f(
+			colorLocation,
+			1.0f, 1.0f, 1.0f,
+			blendTop ? 0.5f : 1.0f
+		);
 	} else {
-		glUniform4f(colorLocation, 0.8f, 0.8f, 0.8f, blendTop ? 0.4f : 0.8f);
+
+		// 淡化状态（亮度降低）
+		glUniform4f(
+			colorLocation,
+			0.8f, 0.8f, 0.8f,
+			blendTop ? 0.4f : 0.8f
+		);
 	}
 
-	// 绘制四边形
+	// 使用三角扇绘制一个矩形（四个顶点）
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
+	// 解绑顶点数组
 	glBindVertexArray(0);
+
+	// 停止使用着色器程序
 	glUseProgram(0);
+
+	// 关闭混合
 	glDisable(GL_BLEND);
-	glViewport(0, 1080 - runner->params.height, runner->params.width, runner->params.height);
+
+	// 恢复 GUI 原始视口大小
+	glViewport(
+		0,
+		1080 - runner->params.height,
+		runner->params.width,
+		runner->params.height
+	);
 }
+
 
 // 为新帧做准备（处理帧间混合和像素缓冲）
 static void _prepareForFrame(struct mGUIRunner* runner) {
@@ -665,106 +732,78 @@ static void _drawScreenshot(struct mGUIRunner* runner, const color_t* pixels, un
 // BKMARK 自定义背景绘制函数
 
 // 绘制游戏画面纹理到指定位置和大小
-static void _drawTexCustom(struct mGUIRunner* runner, unsigned texWidth, unsigned texHeight, 
+static void _drawTexCustom(struct mGUIRunner* runner,
+                          unsigned texWidth, unsigned texHeight,
                           bool faded, bool blendTop,
-                          int targetX, int targetY, 
-                          int targetWidth, int targetHeight) {
-    // 保存原始视口
-    int originalViewport[4];
-    glGetIntegerv(GL_VIEWPORT, originalViewport);
-    
-    // 设置新的视口（注意OpenGL坐标原点在左下角）
-    int screenHeight = runner->params.height;
-    int glY = screenHeight - targetY - targetHeight;  // 转换为OpenGL坐标
-    glViewport(targetX, glY, targetWidth, targetHeight);
-    
+                          int targetX, int targetY,
+                          int targetWidth, int targetHeight)
+{
+    // 计算 OpenGL viewport（基于 vheight，而不是 screenH）
+    // 计算视口左下角坐标
+	int vpX = targetX;
+    int vpY = 1080 - targetY - targetHeight;  
+	BK_LOG_INFO("vpX=%d, vpY=%d, texWidth=%d, texHeight=%d, targetWidth=%d, targetHeight=%d\n", vpX, vpY, texWidth, texHeight, targetWidth, targetHeight);
+    glViewport(vpX, vpY, targetWidth, targetHeight);
+	GLenum viewportError = glGetError();
+	if (viewportError != GL_NO_ERROR) {
+        BK_LOG_ERROR("glViewport错误: 0x%04X (GL_INVALID_VALUE)", viewportError);
+	}
+
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    // 设置纹理过滤模式
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filterMode == FM_LINEAR ? GL_LINEAR : GL_NEAREST);
+	
+	glTexParameteri(
+		GL_TEXTURE_2D,
+		GL_TEXTURE_MAG_FILTER,
+		filterMode == FM_LINEAR ? GL_LINEAR : GL_NEAREST
+	);
 
     glUseProgram(program);
     glBindVertexArray(vao);
-    
-    float inwidth = texWidth;
-    float inheight = texHeight;
-    
-    // 如果启用SGB边框裁剪
-    if (sgbCrop && texWidth == 256 && texHeight == 224) {
-        inwidth = GB_VIDEO_HORIZONTAL_PIXELS;
-        inheight = GB_VIDEO_VERTICAL_PIXELS;
-    }
-    
-    // 计算宽高比 - 相对于目标区域
-    float aspectX = inwidth / targetWidth;
-    float aspectY = inheight / targetHeight;
-    float max = 1.f;
-    
-    // 根据屏幕模式计算缩放因子
-    switch (screenMode) {
-    case SM_PA:
-        // 像素精确模式：向下舍入缩放倍数
-        if (aspectX > aspectY) {
-            max = floor(1.f / aspectX);
-        } else {
-            max = floor(1.f / aspectY);
-        }
-        if (max >= 1.f) {
-            break;
-        }
-        // Fall through
-    case SM_AF:
-        // 宽高比适应模式：保持宽高比
-        if (aspectX > aspectY) {
-            max = 1.f / aspectX;
-        } else {
-            max = 1.f / aspectY;
-        }
-        break;
-    case SM_SF:
-        // 拉伸填满模式：不保持宽高比
-        aspectX = 1.f;
-        aspectY = 1.f;
-        break;
-    }
 
-    // 如果不是拉伸模式，调整宽高比
-    if (screenMode != SM_SF) {
-        aspectX = texWidth / (float) targetWidth;
-        aspectY = texHeight / (float) targetHeight;
-    }
+	// 保存输入纹理尺寸为浮点数
+	float inwidth = texWidth;
+	float inheight = texHeight;
 
-    // 应用最大缩放因子
-    aspectX *= max;
-    aspectY *= max;
+	// 计算输入纹理与视口的宽高比例
+	float aspectX = 1;
+	float aspectY = 1;
 
-    // 设置着色器uniform变量
+
+    // 纹理相关 uniform
     glUniform1i(texLocation, 0);
-    glUniform2f(dimsLocation, aspectX, aspectY);
-    if (usePbo) {
-        glUniform2f(insizeLocation, texWidth / 256.f, texHeight / 256.f);
-    } else {
-        glUniform2f(insizeLocation, 1, 1);
-    }
-    // 根据是否淡化来设置颜色
+    glUniform2f(dimsLocation, 1.0f, 1.0f);
+
+	if (usePbo) {
+		// 设置输入纹理尺寸相对值（通常用于特殊缩放）
+		glUniform2f(insizeLocation, bk_calc_insize(texWidth),  bk_calc_insize(texHeight));
+	} else {
+		// 否则使用默认值
+		glUniform2f(insizeLocation, 1, 1);
+	}
+
+
     if (!faded) {
         glUniform4f(colorLocation, 1.0f, 1.0f, 1.0f, blendTop ? 0.5f : 1.0f);
     } else {
         glUniform4f(colorLocation, 0.8f, 0.8f, 0.8f, blendTop ? 0.4f : 0.8f);
     }
 
-    // 绘制四边形
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
     glBindVertexArray(0);
     glUseProgram(0);
     glDisable(GL_BLEND);
-    
-    // 恢复原始视口
-    glViewport(originalViewport[0], originalViewport[1], 
-               originalViewport[2], originalViewport[3]);
+
+    // 恢复主 viewport
+    glViewport(
+        0,
+        1080 - runner->params.height,
+        runner->params.width,
+        runner->params.height
+    );
 }
+
 
 
 static void _drawBKImage(struct mGUIRunner* runner, const color_t* pixels, 
@@ -1433,8 +1472,7 @@ int main(int argc, char* argv[]) {
     // 获取全局运行器指针
 	bk_global_runner = &runner;
 
-
-
+	BK_LOG_INIT(BK_LOG_LEVEL_DEBUG, 1, 1);
 
 
 
