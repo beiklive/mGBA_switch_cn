@@ -215,13 +215,19 @@ static enum GUIMenuExitReason GUIMenuPollInput(struct GUIParams* params, struct 
 	// No action taken
 	return GUI_MENU_CONTINUE;
 }
-
+// BKMARK: 菜单绘制函数 GUIMenuDraw
 static void GUIMenuDraw(struct GUIParams* params, const struct GUIMenu* menu, const struct GUIMenuState* state) {
 	size_t lineHeight = GUIFontHeight(params->font);
 	params->drawStart();
-	if (menu->background) {
+	if (menu->background && !menu->bkbg) {
 		menu->background->draw(menu->background, GUIMenuItemListGetConstPointer(&menu->items, menu->index)->data.v.p);
 	}
+	else
+	{
+		// printf("当前菜单项: %s, %s\n", item->title, bk_util_is_valid_rom_extension(item->title) ? "游戏文件" : "不是游戏");
+		menu->background->draw(menu->background, "default.png");
+	}
+
 	if (params->guiPrepare) {
 		params->guiPrepare();
 	}
@@ -242,11 +248,11 @@ static void GUIMenuDraw(struct GUIParams* params, const struct GUIMenu* menu, co
 		if (i == menu->index) {
 			color = item->readonly ? 0xD0909090 : 0xFFFFFFFF;
 			int isFold = false;
-			BK_GLOBAL_INT_GET("BK.isFolderList", isFold);
-			if(isFold)
-			{
-				printf("当前菜单项: %s, %s\n", item->title, bk_util_is_valid_rom_extension(item->title) ? "游戏文件" : "不是游戏");
-			}
+			// BK_GLOBAL_INT_GET("BK.isFolderList", isFold);
+			// if(isFold)
+			// {
+			// 	printf("当前菜单项: %s, %s\n", item->title, bk_util_is_valid_rom_extension(item->title) ? "游戏文件" : "不是游戏");
+			// }
 			// beiklive  可以在这里绘制 背景图片   但是需要提前读取图片到缓存
 			GUIFontDrawIcon(params->font, lineHeight * 0.8f, y, GUI_ALIGN_BOTTOM | GUI_ALIGN_RIGHT, GUI_ORIENT_0, color, GUI_ICON_POINTER);
 		}

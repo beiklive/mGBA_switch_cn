@@ -109,7 +109,7 @@ static bool _testExtensions(const char* name) {
 
 	return true;
 }
-
+// BKMARK 全局运行器的背景绘制函数(有游戏画面的时候绘制游戏帧)
 static void _drawBackground(struct GUIBackground* background, void* context) {
 	UNUSED(context);
 	struct mGUIBackground* gbaBackground = (struct mGUIBackground*) background;
@@ -118,7 +118,7 @@ static void _drawBackground(struct GUIBackground* background, void* context) {
 	}
 }
 
-// 绘制状态缩略图/背景的回调函数
+// BKMARK 保存和读取状态的背景绘制函数(画存档截图)
 static void _drawState(struct GUIBackground* background, void* id) {
 
 	// 将通用 GUIBackground 转换为 mGBA 专用的背景结构

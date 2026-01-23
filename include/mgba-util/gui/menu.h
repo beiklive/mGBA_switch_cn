@@ -74,6 +74,7 @@ struct GUIMenu {
 	struct GUIMenuItemList items;
 	size_t index;
 	struct GUIBackground* background;
+	bool bkbg;
 };
 
 struct GUIMenuSavedState {

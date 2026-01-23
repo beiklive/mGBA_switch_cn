@@ -188,9 +188,19 @@ static bool _refreshDirectory(struct GUIParams* params, const char* currentPath,
 }
 
 bool GUISelectFile(struct GUIParams* params, char* outPath, size_t outLen, bool (*filterName)(const char* name), bool (*filterContents)(struct VFile*), const char* preselect) {
+	struct mGUIBackground drawState = {
+		.d = {
+			.draw = _bk_util_draw_game_logo
+		},
+		.p = bk_global_runner,
+		.image = 0,
+		.screenshotId = 0
+	};
 	struct GUIMenu menu = {
 		.title = "请选择游戏文件",
 		.subtitle = params->currentPath,
+		.background = &drawState.d,
+		.bkbg = true
 	};
 	GUIMenuItemListInit(&menu.items, 0);
 	_refreshDirectory(params, params->currentPath, &menu.items, filterName, filterContents, preselect);

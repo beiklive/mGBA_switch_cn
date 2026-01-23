@@ -651,6 +651,162 @@ static void _drawScreenshot(struct mGUIRunner* runner, const color_t* pixels, un
 	_drawTex(runner, width, height, faded, false);
 }
 
+
+
+
+
+
+
+
+
+
+
+
+// BKMARK 自定义背景绘制函数
+
+// 绘制游戏画面纹理到指定位置和大小
+static void _drawTexCustom(struct mGUIRunner* runner, unsigned texWidth, unsigned texHeight, 
+                          bool faded, bool blendTop,
+                          int targetX, int targetY, 
+                          int targetWidth, int targetHeight) {
+    // 保存原始视口
+    int originalViewport[4];
+    glGetIntegerv(GL_VIEWPORT, originalViewport);
+    
+    // 设置新的视口（注意OpenGL坐标原点在左下角）
+    int screenHeight = runner->params.height;
+    int glY = screenHeight - targetY - targetHeight;  // 转换为OpenGL坐标
+    glViewport(targetX, glY, targetWidth, targetHeight);
+    
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    // 设置纹理过滤模式
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filterMode == FM_LINEAR ? GL_LINEAR : GL_NEAREST);
+
+    glUseProgram(program);
+    glBindVertexArray(vao);
+    
+    float inwidth = texWidth;
+    float inheight = texHeight;
+    
+    // 如果启用SGB边框裁剪
+    if (sgbCrop && texWidth == 256 && texHeight == 224) {
+        inwidth = GB_VIDEO_HORIZONTAL_PIXELS;
+        inheight = GB_VIDEO_VERTICAL_PIXELS;
+    }
+    
+    // 计算宽高比 - 相对于目标区域
+    float aspectX = inwidth / targetWidth;
+    float aspectY = inheight / targetHeight;
+    float max = 1.f;
+    
+    // 根据屏幕模式计算缩放因子
+    switch (screenMode) {
+    case SM_PA:
+        // 像素精确模式：向下舍入缩放倍数
+        if (aspectX > aspectY) {
+            max = floor(1.f / aspectX);
+        } else {
+            max = floor(1.f / aspectY);
+        }
+        if (max >= 1.f) {
+            break;
+        }
+        // Fall through
+    case SM_AF:
+        // 宽高比适应模式：保持宽高比
+        if (aspectX > aspectY) {
+            max = 1.f / aspectX;
+        } else {
+            max = 1.f / aspectY;
+        }
+        break;
+    case SM_SF:
+        // 拉伸填满模式：不保持宽高比
+        aspectX = 1.f;
+        aspectY = 1.f;
+        break;
+    }
+
+    // 如果不是拉伸模式，调整宽高比
+    if (screenMode != SM_SF) {
+        aspectX = texWidth / (float) targetWidth;
+        aspectY = texHeight / (float) targetHeight;
+    }
+
+    // 应用最大缩放因子
+    aspectX *= max;
+    aspectY *= max;
+
+    // 设置着色器uniform变量
+    glUniform1i(texLocation, 0);
+    glUniform2f(dimsLocation, aspectX, aspectY);
+    if (usePbo) {
+        glUniform2f(insizeLocation, texWidth / 256.f, texHeight / 256.f);
+    } else {
+        glUniform2f(insizeLocation, 1, 1);
+    }
+    // 根据是否淡化来设置颜色
+    if (!faded) {
+        glUniform4f(colorLocation, 1.0f, 1.0f, 1.0f, blendTop ? 0.5f : 1.0f);
+    } else {
+        glUniform4f(colorLocation, 0.8f, 0.8f, 0.8f, blendTop ? 0.4f : 0.8f);
+    }
+
+    // 绘制四边形
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+    glBindVertexArray(0);
+    glUseProgram(0);
+    glDisable(GL_BLEND);
+    
+    // 恢复原始视口
+    glViewport(originalViewport[0], originalViewport[1], 
+               originalViewport[2], originalViewport[3]);
+}
+
+
+static void _drawBKImage(struct mGUIRunner* runner, const color_t* pixels, 
+                                 unsigned width, unsigned height, bool faded,
+                                 int targetX, int targetY, 
+                                 int targetWidth, int targetHeight) {
+    // 上传像素数据到纹理
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, 
+                   GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+
+    // 绘制到指定位置和大小
+    _drawTexCustom(runner, width, height, faded, false, 
+                   targetX, targetY, targetWidth, targetHeight);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // 轮询游戏输入
 static uint16_t _pollGameInput(struct mGUIRunner* runner) {
 	return _pollInput(&runner->core->inputMap);
@@ -1221,6 +1377,7 @@ int main(int argc, char* argv[]) {
 		.prepareForFrame = _prepareForFrame,
 		.drawFrame = _drawFrame,
 		.drawScreenshot = _drawScreenshot,
+		.drawBKImage = _drawBKImage,
 		.paused = _gameUnloaded,
 		.unpaused = _gameLoaded,
 		.incrementScreenMode = _incrementScreenMode,
@@ -1267,6 +1424,8 @@ int main(int argc, char* argv[]) {
 	}
 
 	// ===================beiklive
+	mkdir(BK_CONFIG_BASE_PATH, 0755);
+	mkdir(BK_LOGO_BASE_PATH, 0755);
 	if (!bk_config_init()) {
         printf("配置管理器初始化失败\n");
         return 1;
