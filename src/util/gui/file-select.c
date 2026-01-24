@@ -23,11 +23,133 @@
 #define SCANNING_THRESHOLD_2 50
 #endif
 
+char mappSubtitle[PATH_MAX];
+
+char* process_path_with_mapping(const char* path) {
+    if (path == NULL || path[0] != '/') {
+        return NULL;
+    }
+    // 移除尾部的斜杠
+    char* processed_path = strdup(path);
+    if (processed_path == NULL) {
+        return NULL;
+    }
+    
+    size_t len = strlen(processed_path);
+    while (len > 1 && processed_path[len - 1] == '/') {
+        len--;
+        processed_path[len] = '\0';
+    }
+    
+    // 统计路径段数
+    int segment_count = 0;
+    for (int i = 1; processed_path[i] != '\0'; i++) {
+        if (processed_path[i] == '/' && processed_path[i-1] != '/') {
+            segment_count++;
+        }
+    }
+    if (processed_path[len-1] != '/') {
+        segment_count++;
+    }
+    
+    if (segment_count == 0) {
+        // 只有根目录
+        char* result = strdup("/");
+        free(processed_path);
+        return result;
+    }
+    
+    // 分配数组存储路径段
+    char** segments = (char**)malloc(segment_count * sizeof(char*));
+    char** mapped_segments = (char**)malloc(segment_count * sizeof(char*));
+    if (segments == NULL || mapped_segments == NULL) {
+        free(segments);
+        free(mapped_segments);
+        free(processed_path);
+        return NULL;
+    }
+    
+    // 分割路径
+    int index = 0;
+    char* token = strtok(processed_path + 1, "/"); // 跳过开头的/
+    
+    while (token != NULL && index < segment_count) {
+        segments[index] = strdup(token);
+        if (segments[index] == NULL) {
+            // 清理内存
+            for (int j = 0; j < index; j++) {
+                free(segments[j]);
+            }
+            free(segments);
+            free(mapped_segments);
+            free(processed_path);
+            return NULL;
+        }
+        index++;
+        token = strtok(NULL, "/");
+    }
+    
+    // 获取映射的目录名并重新组合
+    size_t total_length = 2; // 开头的/和结尾的\0
+    for (int i = 0; i < segment_count; i++) {
+        mapped_segments[i] = bk_config_get(segments[i]);
+        if (mapped_segments[i] == NULL) {
+            // 使用原始名称作为后备
+            mapped_segments[i] = segments[i];
+        } else {
+            // 释放原始名称，使用映射名称
+            free(segments[i]);
+        }
+        total_length += strlen(mapped_segments[i]) + 1; // +1 for /
+    }
+    
+    // 分配结果字符串
+    char* result = (char*)malloc(total_length);
+    if (result == NULL) {
+        for (int i = 0; i < segment_count; i++) {
+            if (mapped_segments[i] != segments[i]) {
+                free(mapped_segments[i]);
+            }
+        }
+        free(segments);
+        free(mapped_segments);
+        free(processed_path);
+        return NULL;
+    }
+    
+    // 组合结果
+    result[0] = '/';
+    result[1] = '\0';
+    
+    for (int i = 0; i < segment_count; i++) {
+        if (i > 0) {
+            strcat(result, "/");
+        }
+        strcat(result, mapped_segments[i]);
+        
+        // 释放映射名称（如果是通过bk_config_get获取的）
+        if (mapped_segments[i] != segments[i]) {
+            free(mapped_segments[i]);
+        }
+    }
+    
+    // 清理
+    free(segments);
+    free(mapped_segments);
+    free(processed_path);
+    return result;
+}
+
+
 static void _cleanFiles(struct GUIMenuItemList* currentFiles) {
 	size_t size = GUIMenuItemListSize(currentFiles);
 	size_t i;
 	for (i = 1; i < size; ++i) {
 		free((char*) GUIMenuItemListGetPointer(currentFiles, i)->title);
+		if(GUIMenuItemListGetPointer(currentFiles, i)->mappedTitle)
+		{
+			free((char*) GUIMenuItemListGetPointer(currentFiles, i)->mappedTitle);
+		}
 	}
 	GUIMenuItemListClear(currentFiles);
 }
@@ -115,7 +237,22 @@ static bool _refreshDirectory(struct GUIParams* params, const char* currentPath,
 			free(extensionn);
 			basename = NULL;
 			extensionn = NULL;
-		} // BKTODO 追加目录名称映射
+		} // BKMARK 追加目录名称映射
+		else if(bk_util_has_mgba_dir_prefix(name))
+		{
+			char* basename = bk_util_remove_trailing_slash_copy(name);
+			char* mapped_name = bk_config_get(basename);
+			if(mapped_name == NULL)
+			{
+				*GUIMenuItemListAppend(currentFiles) = (struct GUIMenuItem) { .title = name, .mappedTitle = NULL, .data = GUI_V_U(de->type(de)) };
+			}
+			else
+			{
+				*GUIMenuItemListAppend(currentFiles) = (struct GUIMenuItem) { .title = name, .mappedTitle = bk_util_str_concatenate(mapped_name, "/"), .data = GUI_V_U(de->type(de)) };
+			}
+			free(basename);
+			basename = NULL;
+		}
 		else
 		{
 			*GUIMenuItemListAppend(currentFiles) = (struct GUIMenuItem) { .title = name, .mappedTitle = NULL, .data = GUI_V_U(de->type(de)) };
@@ -187,6 +324,7 @@ static bool _refreshDirectory(struct GUIParams* params, const char* currentPath,
 	return true;
 }
 
+
 bool GUISelectFile(struct GUIParams* params, char* outPath, size_t outLen, bool (*filterName)(const char* name), bool (*filterContents)(struct VFile*), const char* preselect) {
 	struct mGUIBackground drawState = {
 		.d = {
@@ -196,9 +334,12 @@ bool GUISelectFile(struct GUIParams* params, char* outPath, size_t outLen, bool 
 		.image = 0,
 		.screenshotId = 0
 	};
+
+	strlcpy(mappSubtitle, process_path_with_mapping(params->currentPath), PATH_MAX);
+
 	struct GUIMenu menu = {
 		.title = "请选择游戏文件",
-		.subtitle = params->currentPath
+		.subtitle = mappSubtitle
 		// .background = &drawState.d,
 		// .bkbg = true
 	};
@@ -219,6 +360,7 @@ bool GUISelectFile(struct GUIParams* params, char* outPath, size_t outLen, bool 
 					continue;
 				}
 				_upDirectory(params->currentPath);
+				_upDirectory(mappSubtitle);
 				if (!_refreshDirectory(params, params->currentPath, &menu.items, filterName, filterContents, NULL)) {
 					break;
 				}
@@ -242,6 +384,7 @@ bool GUISelectFile(struct GUIParams* params, char* outPath, size_t outLen, bool 
 					GUIMenuItemListDeinit(&menu.items);
 					menu.items = newFiles;
 					strlcpy(params->currentPath, outPath, PATH_MAX);
+					strlcpy(mappSubtitle, process_path_with_mapping(params->currentPath), PATH_MAX);
 				}
 			}
 			params->fileIndex = 0;
@@ -252,6 +395,7 @@ bool GUISelectFile(struct GUIParams* params, char* outPath, size_t outLen, bool 
 				break;
 			}
 			_upDirectory(params->currentPath);
+			_upDirectory(mappSubtitle);
 			if (!_refreshDirectory(params, params->currentPath, &menu.items, filterName, filterContents, NULL)) {
 				break;
 			}

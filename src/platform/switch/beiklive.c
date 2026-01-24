@@ -589,7 +589,23 @@ static bool bk_string_ends_with_ignore_case(const char* str, const char* suffix)
 	return true;
 }
 
+bool bk_util_has_mgba_dir_prefix(const char* str) {
+    // "mgba_dir"的长度是8
+    const char* prefix = BK_CONFIG_MAPDIR_PREFIX;
+    const size_t prefix_len = 8;
+    
+    // 检查字符串长度是否足够
+    if (str == NULL || strlen(str) < prefix_len) {
+        return false;
+    }
+    
+    // 比较前8个字符
+    return strncmp(str, prefix, prefix_len) == 0;
+}
+
+
 bool bk_util_is_valid_rom_extension(const char* filename) {
+
 	if (!filename)
 		return false;
 
@@ -620,6 +636,31 @@ bool bk_util_is_valid_rom_extension(const char* filename) {
 	return has_valid_extension;
 }
 
+char* bk_util_remove_trailing_slash_copy(const char* str) {
+    if (str == NULL) {
+        return NULL;
+    }
+    
+    size_t len = strlen(str);
+    
+    // 计算需要移除的斜杠数量
+    size_t new_len = len;
+    while (new_len > 0 && str[new_len - 1] == '/') {
+        new_len--;
+    }
+    
+    // 分配新字符串内存
+    char* result = (char*)malloc(new_len + 1);
+    if (result == NULL) {
+        return NULL;
+    }
+    
+    // 复制内容
+    strncpy(result, str, new_len);
+    result[new_len] = '\0';
+    
+    return result;
+}
 /**
  * 去除文件后缀，返回文件名称（不含后缀）
  * @param filename 完整文件名
@@ -792,7 +833,7 @@ struct VFile* bk_util_open_png(const char* path, int mode) {
 }
 
 
-uint32_t normalize_cn_symbol(uint32_t u)
+uint32_t bk_util_normalize_cn_symbol(uint32_t u)
 {
     switch (u)
     {

@@ -23,6 +23,7 @@
 // 配置文件路径
 #define BK_CONFIG_FILE_PATH "sdmc:/switch/mgba/name_map.cfg"
 #define BK_CONFIG_BASE_PATH "sdmc:/switch/mgba"
+#define BK_CONFIG_MAPDIR_PREFIX "mgba_dir"
 
 // 配置项结构体
 typedef struct {
@@ -87,11 +88,12 @@ int bk_config_count(void);
 char* bk_config_export_to_string(void);
 bool bk_config_import_from_string(const char* config_str);
 const bk_config_item_t* bk_config_get_internal_cache(void);
-uint32_t normalize_cn_symbol(uint32_t u);
+uint32_t bk_util_normalize_cn_symbol(uint32_t u);
 
 
 // ============ 文件名处理函数 ============
-bool bk
+bool bk_util_has_mgba_dir_prefix(const char* str);
+char* bk_util_remove_trailing_slash_copy(const char* str);
 bool bk_util_is_valid_rom_extension(const char* filename);
 char* bk_util_remove_extension(const char* filename);
 char* bk_util_get_extension(const char* filename);
