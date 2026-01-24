@@ -222,7 +222,7 @@ static void GUIMenuDraw(struct GUIParams* params, const struct GUIMenu* menu, co
 	if (menu->background && !menu->bkbg) {
 		menu->background->draw(menu->background, GUIMenuItemListGetConstPointer(&menu->items, menu->index)->data.v.p);
 	}
-	else
+	if(menu->background && menu->bkbg)
 	{
 		// printf("当前菜单项: %s, %s\n", item->title, bk_util_is_valid_rom_extension(item->title) ? "游戏文件" : "不是游戏");
 		menu->background->draw(menu->background, "default.png");

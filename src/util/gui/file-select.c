@@ -198,9 +198,9 @@ bool GUISelectFile(struct GUIParams* params, char* outPath, size_t outLen, bool 
 	};
 	struct GUIMenu menu = {
 		.title = "请选择游戏文件",
-		.subtitle = params->currentPath,
-		.background = &drawState.d,
-		.bkbg = true
+		.subtitle = params->currentPath
+		// .background = &drawState.d,
+		// .bkbg = true
 	};
 	GUIMenuItemListInit(&menu.items, 0);
 	_refreshDirectory(params, params->currentPath, &menu.items, filterName, filterContents, preselect);
