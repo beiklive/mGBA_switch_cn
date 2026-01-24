@@ -790,6 +790,64 @@ struct VFile* bk_util_open_png(const char* path, int mode) {
 
 	return vf;
 }
+
+
+uint32_t normalize_cn_symbol(uint32_t u)
+{
+    switch (u)
+    {
+        // 标点
+        case 0xFF0C: return 0x002C; // ， ,
+        case 0x3002: return 0x002E; // 。 .
+        case 0x3001: return 0x002F; // 、 /
+        case 0xFF1A: return 0x003A; // ： :
+        case 0xFF1B: return 0x003B; // ； ;
+        case 0xFF1F: return 0x003F; // ？ ?
+        case 0xFF01: return 0x0021; // ！ !
+
+        // 括号
+        case 0xFF08: return 0x0028; // （ (
+        case 0xFF09: return 0x0029; // ） )
+        case 0x3010: return 0x005B; // 【 [
+        case 0x3011: return 0x005D; // 】 ]
+
+        // 引号
+        case 0x300C: // 「
+        case 0x300D: // 」
+        case 0x300E: // 『
+        case 0x300F: // 』
+        case 0x201C: // “
+        case 0x201D: // ”
+            return 0x0022; // "
+
+        case 0x2018: // ‘
+        case 0x2019: // ’
+            return 0x0027; // '
+
+        // 数学符号
+        case 0xFF0B: return 0x002B; // ＋ +
+        case 0xFF0D: return 0x002D; // － -
+        case 0x00D7: return 0x002A; // × *
+        case 0x00F7: return 0x002F; // ÷ /
+        case 0xFF1D: return 0x003D; // ＝ =
+        case 0xFF1C: return 0x003C; // ＜ <
+        case 0xFF1E: return 0x003E; // ＞ >
+
+        // 其他
+        case 0xFFE5: return 0x0024; // ￥ $
+        case 0xFF5E: return 0x007E; // ～ ~
+        case 0xFF5C: return 0x007C; // ｜ |
+        case 0xFF06: return 0x0026; // ＆ &
+        case 0xFF20: return 0x0040; // ＠ @
+        case 0xFF03: return 0x0023; // ＃ #
+        case 0x3000: return 0x0020; // 全角空格
+
+        default:
+            return u;
+    }
+}
+
+
 void _bk_util_draw_game_logo(struct GUIBackground* background, void* title) {
     static int x_pos = 0;
 	struct mGUIBackground* gbaBackground = (struct mGUIBackground*) background;

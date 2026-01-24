@@ -115,7 +115,7 @@ static bool _refreshDirectory(struct GUIParams* params, const char* currentPath,
 			free(extensionn);
 			basename = NULL;
 			extensionn = NULL;
-		}
+		} // BKTODO 追加目录名称映射
 		else
 		{
 			*GUIMenuItemListAppend(currentFiles) = (struct GUIMenuItem) { .title = name, .mappedTitle = NULL, .data = GUI_V_U(de->type(de)) };

@@ -87,11 +87,11 @@ int bk_config_count(void);
 char* bk_config_export_to_string(void);
 bool bk_config_import_from_string(const char* config_str);
 const bk_config_item_t* bk_config_get_internal_cache(void);
-
+uint32_t normalize_cn_symbol(uint32_t u);
 
 
 // ============ 文件名处理函数 ============
-
+bool bk
 bool bk_util_is_valid_rom_extension(const char* filename);
 char* bk_util_remove_extension(const char* filename);
 char* bk_util_get_extension(const char* filename);

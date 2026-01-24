@@ -409,7 +409,7 @@ static const ChineseGlyphInfo* binary_search_chinese_glyph(uint32_t unicode) {
 void GUIFontDrawGlyph(struct GUIFont* font, int x, int y, uint32_t color, uint32_t unicode) {
     struct GUIFontGlyphMetric metric;
     
-
+	unicode = normalize_cn_symbol(unicode);
 	// printf("(U+%04X) (x: %d, y: %d)\n", unicode, x, y);
 	if (unicode >= CN_GLYPHS_START && unicode < CHINESE_GLYPHS_FINISH) 
 	{
