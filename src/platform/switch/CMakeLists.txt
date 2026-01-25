@@ -30,7 +30,11 @@ if(BUILD_PERF)
 		    DESTINATION . COMPONENT ${BINARY_NAME}-perf)
 endif()
 
-add_executable(${BINARY_NAME}.elf ${GUI_SRC} ${PLATFORM_SRC} main.c beiklive.c)
+set(BEIKLIVE_SRC
+	beiklive.c
+	beiklive_gl.c)
+
+add_executable(${BINARY_NAME}.elf ${GUI_SRC} ${PLATFORM_SRC} main.c ${BEIKLIVE_SRC})
 set_target_properties(${BINARY_NAME}.elf PROPERTIES COMPILE_DEFINITIONS "${OS_DEFINES};${FEATURE_DEFINES};${FUNCTION_DEFINES}")
 target_link_libraries(${BINARY_NAME}.elf ${BINARY_NAME} ${M_LIBRARY} ${EGL_LIBRARY} ${OPENGLES3_LIBRARY} ${GLAPI_LIBRARY} ${NOUVEAU_LIBRARY} stdc++ ${OS_LIB})
 

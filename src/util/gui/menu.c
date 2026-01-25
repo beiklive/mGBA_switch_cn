@@ -218,35 +218,49 @@ static enum GUIMenuExitReason GUIMenuPollInput(struct GUIParams* params, struct 
 // BKMARK: 菜单绘制函数 GUIMenuDraw
 static void GUIMenuDraw(struct GUIParams* params, const struct GUIMenu* menu, const struct GUIMenuState* state) {
 	size_t lineHeight = GUIFontHeight(params->font);
-	params->drawStart();
+	params->drawStart(); // 背景全部涂黑
 	if (menu->background && !menu->bkbg) {
 		menu->background->draw(menu->background, GUIMenuItemListGetConstPointer(&menu->items, menu->index)->data.v.p);
 	}
-	if(menu->background && menu->bkbg)
+	if(menu->background && (menu->bkbg > BK_NONE))
 	{
 		// printf("当前菜单项: %s, %s\n", item->title, bk_util_is_valid_rom_extension(item->title) ? "游戏文件" : "不是游戏");
 		menu->background->draw(menu->background, "default.png");
 	}
 
+	int isFold = false;
+	BK_GLOBAL_INT_GET("BK.isFolderList", isFold);
+
+
+	// 调整视口大小用于全屏绘制文字
 	if (params->guiPrepare) {
 		params->guiPrepare();
 	}
 	unsigned y = lineHeight;
-	GUIFontPrint(params->font, 0, y, GUI_ALIGN_LEFT, 0xFFFFFFFF, menu->title);
+
+	GUIFontPrint(params->font, y, isFold ? y * 1.5f : y, GUI_ALIGN_LEFT, BK_COLOR_BLACK, menu->title);
+	
 	if (menu->subtitle) {
-		GUIFontPrint(params->font, 0, y * 2, GUI_ALIGN_LEFT, 0xFFFFFFFF, menu->subtitle);
+		if(isFold)
+		{
+			GUIFontPrint(params->font, lineHeight, params->height - BK_TITLE_BOTTOM_OFFSET + lineHeight*1.5f, GUI_ALIGN_LEFT, BK_COLOR_BLACK, menu->subtitle);
+		}
+		else
+		{
+			GUIFontPrint(params->font, 0, y + lineHeight, GUI_ALIGN_LEFT, BK_COLOR_BLACK, menu->subtitle);
+		}
 	}
-	y += 2 * lineHeight;
+	y += BK_TITLE_TOP_OFFSET;
 	unsigned right;
 	GUIFontIconMetrics(params->font, GUI_ICON_SCROLLBAR_BUTTON, &right, 0);
-	size_t itemsPerScreen = (params->height - y) / lineHeight;
+	size_t itemsPerScreen = (params->height - y - BK_TITLE_BOTTOM_OFFSET) / lineHeight;
 	size_t i;
 	for (i = state->start; i < GUIMenuItemListSize(&menu->items); ++i) {
-		int color = 0xE0A0A0A0;
+		int color = BK_COLOR_BLACK;
 		const struct GUIMenuItem* item = GUIMenuItemListGetConstPointer(&menu->items, i);
 		// 根据当前选择的菜单项改变图标
 		if (i == menu->index) {
-			color = item->readonly ? 0xD0909090 : 0xFFFFFFFF;
+			color = item->readonly ? BK_COLOR_BLACK : BK_COLOR_BLUE;
 			int isFold = false;
 			// BK_GLOBAL_INT_GET("BK.isFolderList", isFold);
 			// if(isFold)
@@ -266,31 +280,31 @@ static void GUIMenuDraw(struct GUIParams* params, const struct GUIMenu* menu, co
 		if (item->validStates && item->validStates[item->state]) {
 			GUIFontPrintf(params->font, params->width - right - 8, y, GUI_ALIGN_RIGHT, color, "%s ", item->validStates[item->state]);
 		}
-		y += lineHeight;
+		y += lineHeight + BK_ITEM_PADDING;
 		if (y + lineHeight > params->height) {
 			break;
 		}
 	}
 
 	if (itemsPerScreen < GUIMenuItemListSize(&menu->items)) {
-		size_t top = 2 * lineHeight;
-		size_t bottom = params->height - 8;
+		size_t top = BK_TITLE_TOP_OFFSET;
+		size_t bottom = params->height - BK_TITLE_BOTTOM_OFFSET;
 		unsigned w;
 		GUIFontIconMetrics(params->font, GUI_ICON_SCROLLBAR_TRACK, &w, 0);
 		right = (right - w) / 2;
-		GUIFontDrawIconSize(params->font, params->width - right - 8, top, 0, bottom - top, 0xA0FFFFFF, GUI_ICON_SCROLLBAR_TRACK);
-		GUIFontDrawIcon(params->font, params->width - 8, top, GUI_ALIGN_HCENTER | GUI_ALIGN_BOTTOM, GUI_ORIENT_VMIRROR, 0xFFFFFFFF, GUI_ICON_SCROLLBAR_BUTTON);
-		GUIFontDrawIcon(params->font, params->width - 8, bottom, GUI_ALIGN_HCENTER | GUI_ALIGN_TOP, GUI_ORIENT_0, 0xFFFFFFFF, GUI_ICON_SCROLLBAR_BUTTON);
+		GUIFontDrawIconSize(params->font, params->width - right - 8, top, 0, bottom - top, BK_COLOR_BLACK, GUI_ICON_SCROLLBAR_TRACK);
+		GUIFontDrawIcon(params->font, params->width - 8, top, GUI_ALIGN_HCENTER | GUI_ALIGN_BOTTOM, GUI_ORIENT_VMIRROR, BK_COLOR_BLACK, GUI_ICON_SCROLLBAR_BUTTON);
+		GUIFontDrawIcon(params->font, params->width - 8, bottom, GUI_ALIGN_HCENTER | GUI_ALIGN_TOP, GUI_ORIENT_0, BK_COLOR_BLACK, GUI_ICON_SCROLLBAR_BUTTON);
 
 		y = menu->index * (bottom - top - 16) / GUIMenuItemListSize(&menu->items);
-		GUIFontDrawIcon(params->font, params->width - 8, top + y, GUI_ALIGN_HCENTER | GUI_ALIGN_TOP, GUI_ORIENT_0, 0xFFFFFFFF, GUI_ICON_SCROLLBAR_THUMB);
+		GUIFontDrawIcon(params->font, params->width - 8, top + y, GUI_ALIGN_HCENTER | GUI_ALIGN_TOP, GUI_ORIENT_0, BK_COLOR_BLACK, GUI_ICON_SCROLLBAR_THUMB);
 	}
 
 	GUIDrawBattery(params);
 	GUIDrawClock(params);
 
 	if (state->cursor != GUI_CURSOR_NOT_PRESENT) {
-		GUIFontDrawIcon(params->font, state->cx, state->cy, GUI_ALIGN_HCENTER | GUI_ALIGN_TOP, GUI_ORIENT_0, 0xFFFFFFFF, GUI_ICON_CURSOR);
+		GUIFontDrawIcon(params->font, state->cx, state->cy, GUI_ALIGN_HCENTER | GUI_ALIGN_TOP, GUI_ORIENT_0, BK_COLOR_BLACK, GUI_ICON_CURSOR);
 	}
 
 	if (params->guiFinish) {
@@ -326,7 +340,8 @@ enum GUIMenuExitReason GUIShowMessageBox(struct GUIParams* params, int buttons, 
 		if (params->guiPrepare) {
 			params->guiPrepare();
 		}
-		GUIFontPrint(params->font, params->width / 2, (GUIFontHeight(params->font) + params->height) / 2, GUI_ALIGN_HCENTER, 0xFFFFFFFF, message);
+		// 绘制消息弹窗的文字
+		GUIFontPrint(params->font, params->width / 2, (GUIFontHeight(params->font) + params->height) / 2, GUI_ALIGN_HCENTER, BK_COLOR_BLACK, message);
 		if (params->guiFinish) {
 			params->guiFinish();
 		}
@@ -372,18 +387,18 @@ void GUIDrawBattery(struct GUIParams* params) {
 	if (state == BATTERY_NOT_PRESENT) {
 		return;
 	}
-	uint32_t color = 0xFF000000;
-	if ((state & (BATTERY_CHARGING | BATTERY_FULL)) == (BATTERY_CHARGING | BATTERY_FULL)) {
-		color |= 0xFFC060;
-	} else if (state & BATTERY_CHARGING) {
-		color |= 0x60FF60;
-	} else if ((state & BATTERY_VALUE) >= BATTERY_HALF) {
-		color |= 0xFFFFFF;
-	} else if ((state & BATTERY_VALUE) >= BATTERY_LOW) {
-		color |= 0x30FFFF;
-	} else {
-		color |= 0x3030FF;
-	}
+	uint32_t color = BK_COLOR_BLACK;
+	// if ((state & (BATTERY_CHARGING | BATTERY_FULL)) == (BATTERY_CHARGING | BATTERY_FULL)) {
+	// 	color |= #f00505;
+	// } else if (state & BATTERY_CHARGING) {
+	// 	color |= #60FF60;
+	// } else if ((state & BATTERY_VALUE) >= BATTERY_HALF) {
+	// 	color |= #FFFFFF;
+	// } else if ((state & BATTERY_VALUE) >= BATTERY_LOW) {
+	// 	color |= #30FFFF;
+	// } else {
+	// 	color |= #3030FF;
+	// }
 
 	enum GUIIcon batteryIcon;
 	switch ((state & BATTERY_VALUE) - (state & BATTERY_VALUE) % 25) {
@@ -421,5 +436,5 @@ void GUIDrawClock(struct GUIParams* params) {
 	struct tm tm;
 	localtime_r(&t, &tm);
 	strftime(buffer, sizeof(buffer), "%H:%M:%S", &tm);
-	GUIFontPrint(params->font, params->width / 2, GUIFontHeight(params->font), GUI_ALIGN_HCENTER, 0xFFFFFFFF, buffer);
+	GUIFontPrint(params->font, params->width / 2, GUIFontHeight(params->font) , GUI_ALIGN_HCENTER, BK_COLOR_BLACK, buffer);
 }

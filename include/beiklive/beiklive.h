@@ -4,13 +4,34 @@
 #include <mgba-util/vfs.h>
 #include <mgba-util/gui/font.h>
 #include <mgba-util/png-io.h>
+#include <mgba-util/memory.h>
+
+#include <EGL/egl.h>
+#include <GLES3/gl3.h>
+#include <GLES3/gl31.h>
+
+
 #include <stdbool.h>
 #include <stdarg.h>
 #include <setjmp.h>
 #include <time.h>
 #include "feature/gui/gui-runner.h"
+
+
 #include "bk_log.h"
 // ============ 常量定义 ============
+
+#define BK_TITLE_TOP_OFFSET 75
+#define BK_TITLE_BOTTOM_OFFSET 75
+#define BK_ITEM_PADDING 10
+
+// 颜色
+#define BK_COLOR_BLACK 0xFF1F1F1F
+#define BK_COLOR_WHITE 0xFFFFFFFF
+// #define BK_COLOR_BG_WHITE 0xFFebebeb
+#define BK_COLOR_BLUE 0xFF30FFFF
+
+
 
 // ***********名称映射相关定义
 #define BK_ORIGIN_NUM 4616
@@ -106,4 +127,30 @@ char* bk_util_str_concatenate_multiple(int count, ...);
 struct VFile* bk_util_open_png(const char* path, int mode);
 void _bk_util_draw_game_logo(struct GUIBackground* background, void*  title);
 float bk_calc_insize(unsigned realSize);
+uint32_t calculate_hash(const void* data, size_t length);
+
+
+// oopengl 相关函数
+// 背景纹理类型
+enum BKGL_TYPE {
+	BK_NONE = 0, // 无
+	BK_WINDOW, // 窗口背景
+	BK_LOGO, // logo背景
+    BK_MASK, // 遮罩背景
+    BK_MAX
+};
+
+
+extern GLuint bkTex;
+
+
+
+bool bk_opengl_init(void);
+void bk_opengl_deinit(void);
+
+
+
+
+
+
 #endif

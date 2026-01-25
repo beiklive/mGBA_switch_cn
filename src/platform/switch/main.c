@@ -105,6 +105,8 @@ static GLuint colorLocation;       // 颜色uniform位置
 static GLuint tex;                 // 当前游戏画面纹理
 static GLuint oldTex;              // 前一帧的游戏画面纹理（用于帧混合）
 
+
+
 // GUI和游戏相关的全局变量
 static struct GUIFont* font;       // GUI字体对象
 static color_t* frameBuffer;       // 游戏画面帧缓冲
@@ -236,7 +238,7 @@ static void _mapKey(struct mInputMap* map, uint32_t binding, int nativeKey, int 
 // 开始绘制新的一帧
 static void _drawStart(void) {
 	// 设置清空颜色为黑色
-	glClearColor(0.f, 0.f, 0.f, 1.f);
+	glClearColor(235.0f/255.0f, 235.0f/255.0f, 235.0f/255.0f, 1.0f);
 	// 清空颜色缓冲
 	glClear(GL_COLOR_BUFFER_BIT);
 }
@@ -621,6 +623,124 @@ static void _drawTex(
 }
 
 
+
+
+
+
+// BKMARK 自定义背景绘制函数
+
+// 绘制游戏画面纹理到指定位置和大小
+static void _drawTexCustom(struct mGUIRunner* runner,
+                          unsigned texWidth, unsigned texHeight,
+                          bool faded, bool blendTop,
+                          int targetX, int targetY,
+                          int targetWidth, int targetHeight)
+{
+    // 计算 OpenGL viewport（基于 vheight，而不是 screenH）
+    // 计算视口左下角坐标
+	if(targetX < 0) targetX = 0;
+	if(targetY < 0) targetY = 0;
+	// if(targetX + targetWidth > vwidth) targetWidth = vwidth - targetX;
+	// if(targetY + targetHeight > vheight) targetHeight = vheight - targetY;
+
+
+	
+	
+	int vpX = targetX;
+    int vpY = 1080 - targetY - targetHeight;  
+    // glViewport(vpX, vpY, targetWidth, targetHeight);
+    glViewport(0, 360, 1280, 720);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	
+	glTexParameteri(
+		GL_TEXTURE_2D,
+		GL_TEXTURE_MAG_FILTER,
+		filterMode == FM_LINEAR ? GL_LINEAR : GL_NEAREST
+	);
+
+    glUseProgram(program);
+    glBindVertexArray(vao);
+
+	// 保存输入纹理尺寸为浮点数
+	float inwidth = texWidth;
+	float inheight = texHeight;
+
+	// 计算输入纹理与视口的宽高比例
+	float aspectX = inwidth / (float) targetWidth;
+	float aspectY = inheight / (float) targetHeight;
+
+
+    // 纹理相关 uniform
+    glUniform1i(texLocation, 0);
+    glUniform2f(dimsLocation, 1.0f, 1.0f);
+
+	// if (usePbo) {
+	// 	// 设置输入纹理尺寸相对值（通常用于特殊缩放）
+	// 	glUniform2f(insizeLocation, width / 256.f, height / 256.f);
+	// } else {
+	// 	// 否则使用默认值
+	// 	glUniform2f(insizeLocation, 1, 1);
+	// }
+	glUniform2f(insizeLocation, 1, 1);
+
+
+    if (!faded) {
+        glUniform4f(colorLocation, 1.0f, 1.0f, 1.0f, blendTop ? 0.5f : 1.0f);
+    } else {
+        glUniform4f(colorLocation, 0.8f, 0.8f, 0.8f, blendTop ? 0.4f : 0.8f);
+    }
+
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+    glBindVertexArray(0);
+    glUseProgram(0);
+    glDisable(GL_BLEND);
+
+    // 恢复主 viewport
+    glViewport(
+        0,
+        1080 - runner->params.height,
+        runner->params.width,
+        runner->params.height
+    );
+}
+
+
+
+static void _drawBKImage(struct mGUIRunner* runner, const color_t* pixels, 
+                                 unsigned width, unsigned height, bool faded,
+                                 int targetX, int targetY, 
+                                 int targetWidth, int targetHeight, bool isSame) {
+    // 上传像素数据到纹理
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, bkTex);
+	if(!isSame)		
+	{
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, 
+			GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+	}	
+
+    // 绘制到指定位置和大小
+    _drawTexCustom(runner, width, height, faded, false, 
+                   targetX, targetY, targetWidth, targetHeight);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // 为新帧做准备（处理帧间混合和像素缓冲）
 static void _prepareForFrame(struct mGUIRunner* runner) {
 	if (interframeBlending) {
@@ -717,134 +837,6 @@ static void _drawScreenshot(struct mGUIRunner* runner, const color_t* pixels, un
 	// 绘制到屏幕
 	_drawTex(runner, width, height, faded, false);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-// BKMARK 自定义背景绘制函数
-
-// 绘制游戏画面纹理到指定位置和大小
-static void _drawTexCustom(struct mGUIRunner* runner,
-                          unsigned texWidth, unsigned texHeight,
-                          bool faded, bool blendTop,
-                          int targetX, int targetY,
-                          int targetWidth, int targetHeight)
-{
-    // 计算 OpenGL viewport（基于 vheight，而不是 screenH）
-    // 计算视口左下角坐标
-	int vpX = targetX;
-    int vpY = 1080 - targetY - targetHeight;  
-	BK_LOG_INFO("vpX=%d, vpY=%d, texWidth=%d, texHeight=%d, targetWidth=%d, targetHeight=%d\n", vpX, vpY, texWidth, texHeight, targetWidth, targetHeight);
-    glViewport(vpX, vpY, targetWidth, targetHeight);
-	GLenum viewportError = glGetError();
-	if (viewportError != GL_NO_ERROR) {
-        BK_LOG_ERROR("glViewport错误: 0x%04X (GL_INVALID_VALUE)", viewportError);
-	}
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	
-	glTexParameteri(
-		GL_TEXTURE_2D,
-		GL_TEXTURE_MAG_FILTER,
-		filterMode == FM_LINEAR ? GL_LINEAR : GL_NEAREST
-	);
-
-    glUseProgram(program);
-    glBindVertexArray(vao);
-
-	// 保存输入纹理尺寸为浮点数
-	float inwidth = texWidth;
-	float inheight = texHeight;
-
-	// 计算输入纹理与视口的宽高比例
-	float aspectX = 1;
-	float aspectY = 1;
-
-
-    // 纹理相关 uniform
-    glUniform1i(texLocation, 0);
-    glUniform2f(dimsLocation, 1.0f, 1.0f);
-
-	if (usePbo) {
-		// 设置输入纹理尺寸相对值（通常用于特殊缩放）
-		glUniform2f(insizeLocation, bk_calc_insize(texWidth),  bk_calc_insize(texHeight));
-	} else {
-		// 否则使用默认值
-		glUniform2f(insizeLocation, 1, 1);
-	}
-
-
-    if (!faded) {
-        glUniform4f(colorLocation, 1.0f, 1.0f, 1.0f, blendTop ? 0.5f : 1.0f);
-    } else {
-        glUniform4f(colorLocation, 0.8f, 0.8f, 0.8f, blendTop ? 0.4f : 0.8f);
-    }
-
-    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-
-    glBindVertexArray(0);
-    glUseProgram(0);
-    glDisable(GL_BLEND);
-
-    // 恢复主 viewport
-    glViewport(
-        0,
-        1080 - runner->params.height,
-        runner->params.width,
-        runner->params.height
-    );
-}
-
-
-
-static void _drawBKImage(struct mGUIRunner* runner, const color_t* pixels, 
-                                 unsigned width, unsigned height, bool faded,
-                                 int targetX, int targetY, 
-                                 int targetWidth, int targetHeight) {
-    // 上传像素数据到纹理
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, tex);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, 
-                   GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-
-    // 绘制到指定位置和大小
-    _drawTexCustom(runner, width, height, faded, false, 
-                   targetX, targetY, targetWidth, targetHeight);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // 轮询游戏输入
 static uint16_t _pollGameInput(struct mGUIRunner* runner) {
@@ -1236,6 +1228,9 @@ int main(int argc, char* argv[]) {
 
 	// 初始化OpenGL和手柄
 	glInit();
+
+	bk_opengl_init();
+
 	hidSetup();
 
 	// 设置音视频流回调
@@ -1475,7 +1470,6 @@ int main(int argc, char* argv[]) {
 	BK_LOG_INIT(BK_LOG_LEVEL_DEBUG, 1, 1);
 
 
-
 	// ===================beiklive
 
 
@@ -1507,6 +1501,8 @@ int main(int argc, char* argv[]) {
 	GUIFontDestroy(font);
 
 	glDeinit();
+	bk_opengl_deinit();
+
 	hidTeardown();
 
 	psmExit();
