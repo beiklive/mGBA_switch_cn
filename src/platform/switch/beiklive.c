@@ -889,100 +889,6 @@ uint32_t bk_util_normalize_cn_symbol(uint32_t u)
     }
 }
 
-#if 0
-void _bk_util_draw_game_logo(struct GUIBackground* background, void* title) {
-	struct mGUIBackground* gbaBackground = (struct mGUIBackground*) background;
-	int isFold = true;
-	BK_GLOBAL_INT_GET("BK.isFolderList", isFold);
-	if (true) {
-	// if (isFold & bk_util_is_valid_rom_extension(title)) {
-		char* logoPath =
-		    bk_util_str_concatenate_multiple(
-				4,
-				BK_LOGO_BASE_PATH,
-				"/",
-				bk_util_remove_extension(title),
-				".png"
-			);
-		struct VFile* vf = bk_util_open_png(logoPath, O_RDONLY);
-		if (vf) {
-			png_structp png = PNGReadOpen(vf, PNG_HEADER_BYTES);
-			png_infop info = png_create_info_struct(png);
-			png_infop end  = png_create_info_struct(png);
-
-
-			bool success = false;
-			if (png && info && end) {
-				success = PNGReadHeader(png, info);
-			}
-			unsigned width  = png_get_image_width(png, info);
-			unsigned height = png_get_image_height(png, info);
-			size_t pixelSize = width * height * BYTES_PER_PIXEL;
-			if (success) {
-                if (gbaBackground->imageSize != pixelSize){
-					if(gbaBackground->image){
-						free(gbaBackground->image);
-					}
-					gbaBackground->image = NULL;
-					gbaBackground->imageSize = 0;
-					BK_LOG_INFO("重新分配内存: %d\n", pixelSize);
-				}
-				else
-				{
-					BK_LOG_INFO("复用缓存\n");
-				}
-			}
-			if (success) {
-				if (gbaBackground->image == NULL) {
-					gbaBackground->image = malloc(pixelSize);
-					gbaBackground->imageSize = pixelSize;
-					success = PNGReadPixels(
-						png,
-						info,
-						gbaBackground->image,
-						width,
-						height,
-						width
-					);
-					printf("PNGReadPixels: %s\n", success ? "成功" : "失败");
-				}
-			}
-
-			if (success) {
-				success = PNGReadFooter(png, end);
-			}
-
-			if (success) {
-				BK_LOG_INFO("绘制图像到屏幕\n");
-                int screenWidth = gbaBackground->p->params.width;  
-                int screenHeight = gbaBackground->p->params.height;
-                int targetX = 0;
-                int targetY = 0;
-                int targetWidth = screenWidth;
-                int targetHeight = screenHeight;
-				gbaBackground->p->drawBKImage(
-					gbaBackground->p,
-					gbaBackground->image,
-					png_get_image_width(png, info),
-					png_get_image_height(png, info),
-					true,
-					targetX,
-					targetY,
-					screenWidth,
-					screenHeight,
-					false
-				);
-			}
-			PNGReadClose(png, info, end);
-			vf->close(vf);
-		}
-		// 修复点 ③：释放路径字符串
-		if (logoPath) {
-			free(logoPath);
-		}
-	}
-}
-#endif
 float bk_calc_insize(unsigned realSize) {
     unsigned pot = 1;
     while (pot < realSize) {
@@ -990,6 +896,7 @@ float bk_calc_insize(unsigned realSize) {
     }
     return (float)realSize / (float)pot;
 }
+
 // 哈希函数
 uint32_t calculate_hash(const void* data, size_t length) {
     const uint8_t* bytes = (const uint8_t*)data;
@@ -1002,3 +909,5 @@ uint32_t calculate_hash(const void* data, size_t length) {
     
     return hash;
 }
+
+

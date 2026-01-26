@@ -237,8 +237,13 @@ static void _mapKey(struct mInputMap* map, uint32_t binding, int nativeKey, int 
 
 // 开始绘制新的一帧
 static void _drawStart(void) {
-	// 设置清空颜色为黑色
-	glClearColor(235.0f/255.0f, 235.0f/255.0f, 235.0f/255.0f, 1.0f);
+	int themeType = BK_THEME_DEFAULT;
+	BK_GLOBAL_INT_GET(BK_META_CONFIG_THEME, themeType);
+	if (themeType == BK_THEME_DEFAULT) {
+		glClearColor(0.f, 0.f, 0.f, 1.f);
+	} else if (themeType == BK_THEME_SWITCH) {
+		glClearColor(235.0f/255.0f, 235.0f/255.0f, 235.0f/255.0f, 1.0f);
+	}
 	// 清空颜色缓冲
 	glClear(GL_COLOR_BUFFER_BIT);
 }

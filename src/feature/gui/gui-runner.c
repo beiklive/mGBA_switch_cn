@@ -302,7 +302,9 @@ void mGUIInit(struct mGUIRunner* runner, const char* port) {
 	mInputMapInit(&runner->params.keyMap, &_mGUIKeyInfo);
 	mCoreConfigInit(&runner->config, runner->port);
 	// TODO: Do we need to load more defaults?
-	mCoreConfigSetDefaultIntValue(&runner->config, "BK.isFileList", true);
+	// BKMARK 设置项默认值
+	mCoreConfigSetDefaultIntValue(&runner->config, BK_META_ISFOLDER, true);
+	mCoreConfigSetDefaultIntValue(&runner->config, BK_META_CONFIG_THEME, BK_THEME_DEFAULT);
 
 
 	mCoreConfigSetDefaultIntValue(&runner->config, "volume", 0x100);
@@ -859,16 +861,16 @@ void mGUIRunloop(struct mGUIRunner* runner) {
 		if (preselect) {
 			++preselect;
 		}
-		BK_GLOBAL_INT_SET("BK.isFolderList", true);
+		BK_GLOBAL_INT_SET(BK_META_ISFOLDER, true);
 		if (!GUISelectFile(&runner->params, path, sizeof(path), _testExtensions, NULL, preselect)) {
 			break;
 		}
 		mCoreConfigSetValue(&runner->config, "lastDirectory", runner->params.currentPath);
 		mCoreConfigSetValue(&runner->config, "lastGame", path);
-		mCoreConfigSave(&runner->config);
-
-		BK_GLOBAL_INT_SET("BK.isFolderList", false);
-		mGUIRun(runner, path); // 游戏开始运行
+		BK_GLOBAL_INT_SET(BK_META_ISFOLDER, false);
+		mCoreConfigSave(&runner->config); // BKMARK: 保存配置函数
+		
+		mGUIRun(runner, path); 
 	}
 }
 

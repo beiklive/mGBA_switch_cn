@@ -19,6 +19,7 @@
 
 
 #include "bk_log.h"
+#include "bk_theme.h"
 // ============ 常量定义 ============
 
 #define BK_TITLE_TOP_OFFSET 75
@@ -28,8 +29,7 @@
 // 颜色
 #define BK_COLOR_BLACK 0xFF1F1F1F
 #define BK_COLOR_WHITE 0xFFFFFFFF
-// #define BK_COLOR_BG_WHITE 0xFFebebeb
-#define BK_COLOR_BLUE 0xFF30FFFF
+#define BK_COLOR_BLUE  0xFFf00505
 
 
 
@@ -41,6 +41,28 @@
 #define BK_CONFIG_MAX_KEY_LENGTH 100
 // 最大值长度
 #define BK_CONFIG_MAX_VALUE_LENGTH 150
+
+
+// 元数据相关变量
+
+// 保存主题索引
+#define BK_META_CONFIG_THEME "BK.config.theme" 
+
+#define BK_META_ISFOLDER "BK.isFolderList"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // 配置文件路径
 #define BK_CONFIG_FILE_PATH "sdmc:/switch/mgba/name_map.cfg"
 #define BK_CONFIG_BASE_PATH "sdmc:/switch/mgba"
@@ -120,7 +142,6 @@ char* bk_util_remove_extension(const char* filename);
 char* bk_util_get_extension(const char* filename);
 char* bk_util_str_concatenate(const char* str1, const char* str2);
 char* bk_util_str_concatenate_multiple(int count, ...);
-
 
 
 // =======绘图函数
