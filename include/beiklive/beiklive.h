@@ -44,15 +44,24 @@
 
 
 // 元数据相关变量
-
+#define BK_PRO_STATUS               "BK.pro.status"
 #define BK_META_CONFIG_THEME        "BK.config.theme" 
 #define BK_META_ISFOLDER            "BK.isFolderList"
 #define BK_META_MASK_ENABLE         "BK.config.mask.enable"
+#define BK_META_MASK_STATUS_GBA         "BK.config.mask.status.gba"
+#define BK_META_MASK_STATUS_GBC         "BK.config.mask.status.gbc"
 #define BK_META_MASK_GBA            "BK.config.mask.gba"
 #define BK_META_MASK_GBC            "BK.config.mask.gbc"
+#define BK_META_GAME_TYPE           "BK.game.type"
 
 
-
+enum BK_RUNNING_TYPE {
+    BK_RUNNING_TYPE_NONE = 0,
+    BK_RUNNING_TYPE_FILELIST,
+    BK_RUNNING_TYPE_GAME,
+    BK_RUNNING_TYPE_MENU,
+    BK_RUNNING_TYPE_MAX
+};
 
 
 
@@ -149,7 +158,7 @@ bool _bk_mask_Extensions(const char* name);
 
 // =======绘图函数
 struct VFile* bk_util_open_png(const char* path, int mode);
-void _bk_util_draw_game_logo(struct GUIBackground* background, void*  title);
+void _bk_util_draw_menu_background(struct GUIBackground* background, void*  title);
 float bk_calc_insize(unsigned realSize);
 uint32_t calculate_hash(const void* data, size_t length);
 
@@ -166,13 +175,18 @@ enum BKGL_TYPE {
 
 
 extern GLuint bkTex;
-
+extern GLuint bkMaskTexGBA;
+extern GLuint bkMaskTexGBC;
+extern GLuint bkProgram;
+extern GLuint bktexLocation;         // 纹理uniform位置
+extern GLuint bkdimsLocation;        // 尺寸uniform位置
+extern GLuint bkinsizeLocation;      // 输入大小uniform位置
+extern GLuint bkcolorLocation;       // 颜色uniform位置
 
 
 bool bk_opengl_init(void);
 void bk_opengl_deinit(void);
-
-
+void bk_init_mask_texture(const char* filepath, int maskType);
 
 
 

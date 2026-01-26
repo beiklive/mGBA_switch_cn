@@ -86,6 +86,7 @@ struct mGUIRunner {
 	void (*drawFrame)(struct mGUIRunner*, bool faded);
 	void (*drawScreenshot)(struct mGUIRunner*, const color_t* pixels, unsigned width, unsigned height, bool faded);
 	void (*drawBKImage)(struct mGUIRunner*, const color_t* pixels, unsigned width, unsigned height, bool faded, bool isSame);
+	void (*drawGameMask)(struct mGUIRunner*, int platfrom);
 	void (*paused)(struct mGUIRunner*);
 	void (*unpaused)(struct mGUIRunner*);
 	void (*incrementScreenMode)(struct mGUIRunner*);

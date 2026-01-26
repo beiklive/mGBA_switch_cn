@@ -239,7 +239,9 @@ static void _mapKey(struct mInputMap* map, uint32_t binding, int nativeKey, int 
 static void _drawStart(void) {
 	int themeType = BK_THEME_DEFAULT;
 	BK_GLOBAL_INT_GET(BK_META_CONFIG_THEME, themeType);
-	if (themeType == BK_THEME_DEFAULT) {
+	int type;
+	BK_GLOBAL_INT_GET(BK_META_GAME_TYPE, type);
+	if (themeType == BK_THEME_DEFAULT || type == BK_RUNNING_TYPE_MENU) {
 		glClearColor(0.f, 0.f, 0.f, 1.f);
 	} else if (themeType == BK_THEME_SWITCH) {
 		glClearColor(235.0f/255.0f, 235.0f/255.0f, 235.0f/255.0f, 1.0f);
@@ -697,8 +699,86 @@ static void _drawTexCustom(struct mGUIRunner* runner,
         runner->params.height
     );
 }
+static void _drawTexMask(struct mGUIRunner* runner,
+                          unsigned texWidth, unsigned texHeight,
+                          bool faded, bool blendTop)
+{
+
+    glViewport(0, 1080 - vheight, vwidth, vheight);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	
+	glTexParameteri(
+		GL_TEXTURE_2D,
+		GL_TEXTURE_MAG_FILTER,
+		filterMode == FM_LINEAR ? GL_LINEAR : GL_NEAREST
+	);
+
+    glUseProgram(bkProgram);
+    glBindVertexArray(vao);
+
+	// 保存输入纹理尺寸为浮点数
+	float inwidth = texWidth;
+	float inheight = texHeight;
+
+	// 计算输入纹理与视口的宽高比例
+	float aspectX = inwidth / (float) vwidth;
+	float aspectY = inheight / (float) vheight;
 
 
+    // 纹理相关 uniform
+    glUniform1i(bktexLocation, 0);
+    glUniform2f(bkdimsLocation, 1.0f, 1.0f);
+
+	// if (usePbo) {
+	// 	// 设置输入纹理尺寸相对值（通常用于特殊缩放）
+	// 	glUniform2f(insizeLocation, width / 256.f, height / 256.f);
+	// } else {
+	// 	// 否则使用默认值
+	// 	glUniform2f(insizeLocation, 1, 1);
+	// }
+	glUniform2f(bkinsizeLocation, 1, 1);
+
+
+    if (!faded) {
+        glUniform4f(bkcolorLocation, 1.0f, 1.0f, 1.0f, blendTop ? 0.5f : 1.0f);
+    } else {
+        glUniform4f(bkcolorLocation, 0.8f, 0.8f, 0.8f, blendTop ? 0.4f : 0.8f);
+    }
+
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+    glBindVertexArray(0);
+    glUseProgram(0);
+    glDisable(GL_BLEND);
+
+    // 恢复主 viewport
+    glViewport(
+        0,
+        1080 - runner->params.height,
+        runner->params.width,
+        runner->params.height
+    );
+}
+void _drawGameMask(struct mGUIRunner* runner, int maskType){
+    int haveTexture = 0;
+    BK_GLOBAL_INT_GET(maskType == 0 ? BK_META_MASK_STATUS_GBA : BK_META_MASK_STATUS_GBC, haveTexture);
+    if(haveTexture)
+    {
+        glActiveTexture(GL_TEXTURE0);
+        if(maskType == 0)  // GBA
+        {
+            glBindTexture(GL_TEXTURE_2D, bkMaskTexGBA);
+        }
+        else if(maskType == 1) // GB GBC
+        {
+            glBindTexture(GL_TEXTURE_2D, bkMaskTexGBC);
+        }
+
+		_drawTexCustom(runner, 256, 224, false, false);
+    }
+}
 
 static void _drawBKImage(struct mGUIRunner* runner, const color_t* pixels, 
                                  unsigned width, unsigned height, bool faded, bool isSame) {
@@ -766,8 +846,6 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 		return;
 	}
 
-	int isMaskEnabled = 0;
-	BK_GLOBAL_INT_GET(BK_META_MASK_ENABLE, isMaskEnabled);
 
 	// 获取期望的视频尺寸
 	unsigned width, height;
@@ -817,9 +895,7 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 	rumble.up = 0;
 	rumble.down = 0;
 
-	if(isMaskEnabled)
-	{
-	}
+
 
 }
 
@@ -1408,6 +1484,7 @@ int main(int argc, char* argv[]) {
 		.drawFrame = _drawFrame,
 		.drawScreenshot = _drawScreenshot,
 		.drawBKImage = _drawBKImage,
+		.drawGameMask = _drawGameMask,
 		.paused = _gameUnloaded,
 		.unpaused = _gameLoaded,
 		.incrementScreenMode = _incrementScreenMode,
@@ -1465,14 +1542,16 @@ int main(int argc, char* argv[]) {
 
 	BK_LOG_INIT(BK_LOG_LEVEL_DEBUG, 1, 1);
 
-
+	// 读取遮罩纹理到缓存
+	const char* current_gba = mCoreConfigGetValue(&runner.config, BK_META_MASK_GBA);
+	if(current_gba){
+		bk_init_mask_texture(current_gba, 0);
+	}
+	const char* current_gbc = mCoreConfigGetValue(&runner.config, BK_META_MASK_GBC);
+	if(current_gbc){
+		bk_init_mask_texture(current_gbc, 1);
+	}
 	// ===================beiklive
-
-
-
-
-
-
 
 
 	// 如果提供了游戏文件，直接运行游戏；否则显示菜单

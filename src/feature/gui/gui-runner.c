@@ -537,17 +537,20 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 	if (runner->core->platform(runner->core) == mPLATFORM_GBA) {
 		runner->core->setPeripheral(runner->core, mPERIPH_GBA_LUMINANCE, &runner->luminanceSource.d);
 	}
+	// 保存游戏类型
+	BK_GLOBAL_INT_SET(BK_META_GAME_TYPE, runner->core->platform(runner->core));
+
 	mLOG(GUI_RUNNER, DEBUG, "Loading config...");
 	mCoreLoadForeignConfig(runner->core, &runner->config);
 
 	mLOG(GUI_RUNNER, DEBUG, "Loading save...");
-	mCoreAutoloadSave(runner->core);
-	mCoreAutoloadCheats(runner->core);
+	mCoreAutoloadSave(runner->core);  // 读取存档文件
+	mCoreAutoloadCheats(runner->core); // 读取金手指文件
 	if (runner->setup) {
 		mLOG(GUI_RUNNER, DEBUG, "Setting up runner...");
-		runner->setup(runner);
+		runner->setup(runner);  // 设置运行环境
 	}
-	if (runner->config.port && runner->keySources) {
+	if (runner->config.port && runner->keySources) { // 加载按键配置
 		mLOG(GUI_RUNNER, DEBUG, "Loading key sources for %s...", runner->config.port);
 		size_t i;
 		for (i = 0; runner->keySources[i].id; ++i) {
@@ -586,7 +589,7 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 #endif
 
 	if (runner->gameLoaded) {
-		runner->gameLoaded(runner);
+		runner->gameLoaded(runner);  // 加载游戏
 	}
 	mLOG(GUI_RUNNER, INFO, "Game starting");
 	runner->fps = 0;
@@ -600,6 +603,7 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 
 		int frame = 0;
 		while (running) {
+			BK_GLOBAL_INT_SET(BK_PRO_STATUS, BK_RUNNING_TYPE_GAME);
 			if (runner->running) {
 				running = runner->running(runner);
 				if (!running) {
@@ -610,6 +614,7 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 			uint32_t heldKeys;
 			GUIPollInput(&runner->params, &guiKeys, &heldKeys);
 			if (guiKeys & (1 << GUI_INPUT_CANCEL)) {
+				BK_GLOBAL_INT_SET(BK_PRO_STATUS, BK_RUNNING_TYPE_MENU);
 				break;
 			}
 			if (guiKeys & (1 << mGUI_INPUT_INCREASE_BRIGHTNESS)) {
@@ -665,6 +670,18 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 			if (runner->drawFrame) {
 				runner->params.drawStart();  // 清空背景
 				runner->drawFrame(runner, false);
+
+				// ========== 添加遮罩绘制 ==========
+				int isMaskEnabled = 0;
+				BK_GLOBAL_INT_GET(BK_META_MASK_ENABLE, isMaskEnabled);
+				if(isMaskEnabled)
+				{
+					// 获取平台
+					int platform = runner->core->platform(runner->core);
+					runner->drawGameMask(runner, platform);
+				}
+				// ========== 遮罩绘制结束 ==========
+
 				if (showOSD || drawFps) {// 绘制OSD和FPS
 					if (runner->params.guiPrepare) { // 调整视口
 						runner->params.guiPrepare();
@@ -867,6 +884,8 @@ void mGUIRunloop(struct mGUIRunner* runner) {
 			++preselect;
 		}
 		BK_GLOBAL_INT_SET(BK_META_ISFOLDER, true);
+		BK_GLOBAL_INT_SET(BK_PRO_STATUS, BK_RUNNING_TYPE_FILELIST);
+		
 		if (!GUISelectFile(&runner->params, path, sizeof(path), _testExtensions, NULL, preselect)) {
 			break;
 		}

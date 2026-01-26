@@ -328,7 +328,7 @@ static bool _refreshDirectory(struct GUIParams* params, const char* currentPath,
 bool GUISelectFile(struct GUIParams* params, char* outPath, size_t outLen, bool (*filterName)(const char* name), bool (*filterContents)(struct VFile*), const char* preselect) {
 	struct mGUIBackground drawState = {
 		.d = {
-			.draw = _bk_util_draw_game_logo
+			.draw = _bk_util_draw_menu_background
 		},
 		.p = bk_global_runner,
 		.image = 0,

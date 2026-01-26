@@ -281,9 +281,11 @@ void mGUIShowMaskSet(struct mGUIRunner* runner)
             }
 			if (mask_name_gba[0]) {
 				mCoreConfigSetValue(&runner->config, BK_META_MASK_GBA, mask_name_gba);
+                bk_init_mask_texture(mask_name_gba, 0);
 			}
 			if (mask_name_gbc[0]) {
 				mCoreConfigSetValue(&runner->config, BK_META_MASK_GBC, mask_name_gbc);
+                bk_init_mask_texture(mask_name_gbc, 1);
 			}
 
             // 保存数据变量  mCoreConfigSetIntValue

@@ -1,9 +1,67 @@
 #include <beiklive/beiklive.h>
 
 GLuint bkTex;
+GLuint bkMaskTexGBA;
+GLuint bkMaskTexGBC;
+GLuint bkProgram;
+GLuint bktexLocation;         // 纹理uniform位置
+GLuint bkdimsLocation;        // 尺寸uniform位置
+GLuint bkinsizeLocation;      // 输入大小uniform位置
+GLuint bkcolorLocation;       // 颜色uniform位置
+
+color_t* pixels = NULL;
 
 bool bk_opengl_init(void)
 {
+    const GLchar* const _gles2Header =
+	"#version 100\n"
+	"precision mediump float;\n";
+
+const char* const _vertexShader =
+	"attribute vec2 offset;\n"     // 顶点偏移
+	"uniform vec2 dims;\n"         // 缩放尺寸
+	"uniform vec2 insize;\n"       // 输入大小
+	"varying vec2 texCoord;\n"     // 输出纹理坐标
+
+	"void main() {\n"
+	// 计算实际缩放偏移
+	"	vec2 ratio = insize;\n"
+	"	vec2 scaledOffset = offset * dims;\n"
+	// 转换为标准化设备坐标（-1到1）
+	"	gl_Position = vec4(scaledOffset.x * 2.0 - dims.x, scaledOffset.y * -2.0 + dims.y, 0.0, 1.0);\n"
+	// 计算纹理坐标
+	"	texCoord = offset * ratio;\n"
+	"}";
+
+const char* const _fragmentShader =
+	"varying vec2 texCoord;\n"     // 纹理坐标
+	"uniform sampler2D tex;\n"     // 游戏画面纹理
+	"uniform vec4 color;\n"        // 颜色调制
+
+	"void main() {\n"
+	"	vec4 texColor = texture2D(tex, texCoord);\n"
+	"	texColor *= color;\n"
+	"	gl_FragColor = texColor;\n"
+	"}";
+
+// 编译和链接着色器...
+    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    
+    glShaderSource(vertexShader, 1, &_vertexShader, NULL);
+    glCompileShader(vertexShader);
+    
+    glShaderSource(fragmentShader, 1, &_fragmentShader, NULL);
+    glCompileShader(fragmentShader);
+    
+    bkProgram = glCreateProgram();
+    glAttachShader(bkProgram, vertexShader);
+    glAttachShader(bkProgram, fragmentShader);
+    glLinkProgram(bkProgram);
+	bktexLocation = glGetUniformLocation(bkProgram, "tex");
+	bkcolorLocation = glGetUniformLocation(bkProgram, "color");
+	bkdimsLocation = glGetUniformLocation(bkProgram, "dims");
+	bkinsizeLocation = glGetUniformLocation(bkProgram, "insize");
 	// BKMARK 背景绘制纹理
 	glGenTextures(1, &bkTex);
 	glBindTexture(GL_TEXTURE_2D, bkTex);
@@ -13,13 +71,26 @@ bool bk_opengl_init(void)
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1280, 720, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
+
+	glGenTextures(1, &bkMaskTexGBA);
+	glBindTexture(GL_TEXTURE_2D, bkMaskTexGBA);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+	glGenTextures(1, &bkMaskTexGBC);
+	glBindTexture(GL_TEXTURE_2D, bkMaskTexGBC);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
 }
 
 void bk_opengl_deinit(void) { 
     glDeleteTextures(1, &bkTex);
 }
 
-void _bk_util_draw_game_logo(struct GUIBackground* background, void* title)
+void _bk_util_draw_menu_background(struct GUIBackground* background, void* title)
 {
     struct mGUIBackground* gbaBackground = (struct mGUIBackground*) background;
     bool success;
@@ -90,4 +161,84 @@ void _bk_util_draw_game_logo(struct GUIBackground* background, void* title)
         }
     }
 
+}
+
+
+void bk_init_mask_texture(const char* filepath, int maskType){
+    char* maskpath = bk_util_str_concatenate("sdmc:", filepath);
+    
+    struct VFile* vf = bk_util_open_png(maskpath, O_RDONLY);
+    bool success = false;  // 初始化成功标志
+    if(pixels)
+    {
+        free(pixels);
+        pixels = NULL;
+    }
+    unsigned width = 0, height = 0;  // 初始化宽高
+    
+    if (vf) {
+        free(maskpath);
+        
+        png_structp png = PNGReadOpen(vf, PNG_HEADER_BYTES);
+        png_infop info = png_create_info_struct(png);
+        png_infop end  = png_create_info_struct(png);
+        
+        if (png && info && end) {
+            success = PNGReadHeader(png, info);
+        }
+        
+        if (success) {
+            
+            width  = png_get_image_width(png, info);
+            height = png_get_image_height(png, info);
+            int type = png_get_color_type(png, info);
+            int depth = png_get_bit_depth(png, info);
+            if (success) {
+                // 读取 PNG 像素数据到 pixels 缓冲区
+                switch (type) {
+                    case PNG_COLOR_TYPE_RGB:
+                        if (depth != 8) {
+                            break;
+                        }
+                        pixels = anonymousMemoryMap(width * height * 4);
+                        success = success && PNGReadPixels(png, info, pixels, width, height, width);
+                        break;
+                    case PNG_COLOR_TYPE_RGBA:
+                        if (depth != 8) {
+                            break;
+                        }
+                        pixels = anonymousMemoryMap(width * height * BYTES_PER_PIXEL);
+                        success = success && PNGReadPixelsA(png, info, pixels, width, height, width);
+                        break;
+                    default:
+                        break;
+                }
+                // 读取 PNG 尾信息
+                success = success &&
+                    PNGReadFooter(png, end);
+            } else {
+                success = false;
+            }
+        } else {
+            printf("错误：PNG头信息读取失败\n");  // 头信息读取失败
+        }
+        
+        // 关闭 PNG 读取并释放相关结构
+        PNGReadClose(png, info, end);
+    } else {
+        printf("错误：无法打开遮罩纹理文件\n");  // 文件打开失败
+    }
+    
+    if (vf) {
+        vf->close(vf);
+    }
+    
+    if (success) {
+        glBindTexture(GL_TEXTURE_2D, maskType == 0 ? bkMaskTexGBA : bkMaskTexGBC);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    } else {
+        printf("错误：遮罩纹理加载失败: %s\n", filepath);  // 加载失败
+    }
+    
+    BK_GLOBAL_INT_SET(maskType == 0 ? BK_META_MASK_STATUS_GBA : BK_META_MASK_STATUS_GBC, success);
 }
