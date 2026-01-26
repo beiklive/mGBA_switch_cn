@@ -166,21 +166,20 @@ void mGUIShowMaskSet(struct mGUIRunner* runner)
                                  (current_gbc && current_gbc[0] ? current_gbc : "未设置");
         const char* display_gb = mask_name_gb[0] ? mask_name_gb : 
                                 (current_gb && current_gb[0] ? current_gb : "未设置");
-
         *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
             .title = "选择GBA遮罩",
             .data = GUI_V_S(BK_META_MASK_GBA),
-            .leftText = mask_name_gba,
+            .leftText = display_gba,
         };
         *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
             .title = "选择GBC遮罩",
             .data = GUI_V_S(BK_META_MASK_GBC),
-            .leftText = mask_name_gbc,
+            .leftText = display_gbc,
         };
         *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
             .title = "选择GB遮罩",
             .data = GUI_V_S(BK_META_MASK_GB),
-            .leftText = mask_name_gb,
+            .leftText = display_gb,
         };
         *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
             .title = "保存设置",
@@ -302,6 +301,10 @@ void mGUIShowMaskSet(struct mGUIRunner* runner)
             // 保存数据变量  mCoreConfigSetIntValue
             mCoreConfigSave(&runner->config);
 			mCoreLoadForeignConfig(runner->core, &runner->config);
+            // 清除缓冲区，使用新配置的值
+            memset(mask_name_gba, 0, PATH_MAX);
+            memset(mask_name_gbc, 0, PATH_MAX);
+            memset(mask_name_gb, 0, PATH_MAX);
             GUIShowMessageBox(&runner->params, GUI_MESSAGE_BOX_OK, 240, "保存完成!");
         }else
         {

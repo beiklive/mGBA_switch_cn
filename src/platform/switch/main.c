@@ -819,7 +819,6 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 
 	if(isMaskEnabled)
 	{
-		printf("mask enabled\n");
 	}
 
 }
