@@ -637,24 +637,10 @@ static void _drawTex(
 // 绘制游戏画面纹理到指定位置和大小
 static void _drawTexCustom(struct mGUIRunner* runner,
                           unsigned texWidth, unsigned texHeight,
-                          bool faded, bool blendTop,
-                          int targetX, int targetY,
-                          int targetWidth, int targetHeight)
+                          bool faded, bool blendTop)
 {
-    // 计算 OpenGL viewport（基于 vheight，而不是 screenH）
-    // 计算视口左下角坐标
-	if(targetX < 0) targetX = 0;
-	if(targetY < 0) targetY = 0;
-	// if(targetX + targetWidth > vwidth) targetWidth = vwidth - targetX;
-	// if(targetY + targetHeight > vheight) targetHeight = vheight - targetY;
 
-
-	
-	
-	int vpX = targetX;
-    int vpY = 1080 - targetY - targetHeight;  
-    // glViewport(vpX, vpY, targetWidth, targetHeight);
-    glViewport(0, 360, 1280, 720);
+    glViewport(0, 1080 - vheight, vwidth, vheight);
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -673,8 +659,8 @@ static void _drawTexCustom(struct mGUIRunner* runner,
 	float inheight = texHeight;
 
 	// 计算输入纹理与视口的宽高比例
-	float aspectX = inwidth / (float) targetWidth;
-	float aspectY = inheight / (float) targetHeight;
+	float aspectX = inwidth / (float) vwidth;
+	float aspectY = inheight / (float) vheight;
 
 
     // 纹理相关 uniform
@@ -715,9 +701,7 @@ static void _drawTexCustom(struct mGUIRunner* runner,
 
 
 static void _drawBKImage(struct mGUIRunner* runner, const color_t* pixels, 
-                                 unsigned width, unsigned height, bool faded,
-                                 int targetX, int targetY, 
-                                 int targetWidth, int targetHeight, bool isSame) {
+                                 unsigned width, unsigned height, bool faded, bool isSame) {
     // 上传像素数据到纹理
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, bkTex);
@@ -728,8 +712,7 @@ static void _drawBKImage(struct mGUIRunner* runner, const color_t* pixels,
 	}	
 
     // 绘制到指定位置和大小
-    _drawTexCustom(runner, width, height, faded, false, 
-                   targetX, targetY, targetWidth, targetHeight);
+    _drawTexCustom(runner, width, height, faded, false);
 }
 
 
@@ -783,6 +766,9 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 		return;
 	}
 
+	int isMaskEnabled = 0;
+	BK_GLOBAL_INT_GET(BK_META_MASK_ENABLE, isMaskEnabled);
+
 	// 获取期望的视频尺寸
 	unsigned width, height;
 	runner->core->desiredVideoDimensions(runner->core, &width, &height);
@@ -830,6 +816,12 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 	hidSendVibrationValues(vibrationDeviceHandles, values, 4);
 	rumble.up = 0;
 	rumble.down = 0;
+
+	if(isMaskEnabled)
+	{
+		printf("mask enabled\n");
+	}
+
 }
 
 // 绘制游戏截图

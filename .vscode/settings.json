@@ -1,7 +1,7 @@
 {
     "todo-tree.tree.disableCompactFolders": true,
-    "todo-tree.tree.showBadges": false,
-    "todo-tree.tree.showCountsInTree": false,
+    "todo-tree.tree.showBadges": true,
+    "todo-tree.tree.showCountsInTree": true,
     "todo-tree.tree.scanMode": "workspace only",
     "C_Cpp.errorSquiggles": "disabled"
 }

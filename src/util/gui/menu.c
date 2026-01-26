@@ -235,8 +235,8 @@ static void GUIMenuDraw(struct GUIParams* params, const struct GUIMenu* menu, co
 		switch (menu->bkbg)
 		{
 		case BK_WINDOW:
-			// 绘制图片背景
-			menu->background->draw(menu->background, "default.png");
+			// 绘制窗口背景
+			menu->background->draw(menu->background, NULL);
 			break;
 		case BK_MASK:
 			/* code */
@@ -299,6 +299,11 @@ static void GUIMenuDraw(struct GUIParams* params, const struct GUIMenu* menu, co
 		// 绘制选项菜单
 		if (item->validStates && item->validStates[item->state]) {
 			GUIFontPrintf(params->font, params->width - right - 8, y, GUI_ALIGN_RIGHT, color, "%s ", item->validStates[item->state]);
+		}else{
+			if(item->leftText)
+			{
+				GUIFontPrintf(params->font, params->width - right - 8, y, GUI_ALIGN_RIGHT, color, "%s ", item->leftText);
+			}
 		}
 		y += lineHeight + (themeType == BK_THEME_DEFAULT? 0 : BK_ITEM_PADDING);
 		if (y + lineHeight > params->height) {

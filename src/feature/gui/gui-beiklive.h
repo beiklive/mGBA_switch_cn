@@ -7,6 +7,10 @@
 
 CXX_GUARD_START
 
+
+
+
+
 struct mGUIRunner;
 struct GUIMenuItem;
 void mGUIShowBeiklive(struct mGUIRunner* runner);

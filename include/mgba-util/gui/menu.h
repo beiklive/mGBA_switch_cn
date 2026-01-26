@@ -56,6 +56,7 @@ struct GUIMenu;
 struct GUIMenuItem {
 	const char* title;
 	const char* mappedTitle;
+	const char* leftText;
 	struct GUIVariant data;
 	unsigned state;
 	const char* const* validStates;

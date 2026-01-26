@@ -27,29 +27,14 @@ void _bk_util_draw_game_logo(struct GUIBackground* background, void* title)
     bool isSame = false;
     if(gbaBackground->p->drawBKImage)
     {
-        char* logoPath =
-		    bk_util_str_concatenate_multiple(
-				4,
-				BK_LOGO_BASE_PATH,
-				"/",
-				bk_util_remove_extension(title),
-				".png"
-			);
-		struct VFile* vf = bk_util_open_png(logoPath, O_RDONLY);
-
+		struct VFile* vf = bk_util_open_png(BK_DEFAULT_LOGO_FILE, O_RDONLY);
 		if (vf) {
-            if (logoPath) {
-                free(logoPath);
-            }
-
 			png_structp png = PNGReadOpen(vf, PNG_HEADER_BYTES);
 			png_infop info = png_create_info_struct(png);
 			png_infop end  = png_create_info_struct(png);
-
             if (png && info && end) {
 				success = PNGReadHeader(png, info);
 			}
-
 			if (success) {
                 width  = png_get_image_width(png, info);
                 height = png_get_image_height(png, info);
@@ -62,7 +47,6 @@ void _bk_util_draw_game_logo(struct GUIBackground* background, void* title)
                 }
                 // 像素缓冲区指针
                 color_t* pixels = gbaBackground->image;
-
                 // 若当前尚未分配像素缓冲区
                 if (!pixels) {
                     // 使用匿名内存映射分配像素缓存
@@ -95,23 +79,12 @@ void _bk_util_draw_game_logo(struct GUIBackground* background, void* title)
         }
 
         if (success) {
-            int screenWidth = gbaBackground->p->params.width;  
-            int screenHeight = gbaBackground->p->params.height;
-            int targetX = 0;
-            int targetY = screenHeight;
-            int targetWidth = screenWidth;
-            int targetHeight = screenHeight;
-
             gbaBackground->p->drawBKImage(
                 gbaBackground->p,
                 gbaBackground->image,
                 width,
                 height,
                 false,
-                targetX,
-                targetY,
-                screenWidth,
-                screenHeight,
                 isSame
             );
         }

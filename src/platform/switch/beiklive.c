@@ -911,3 +911,10 @@ uint32_t calculate_hash(const void* data, size_t length) {
 }
 
 
+bool _bk_mask_Extensions(const char* name) {
+	if (!strncmp(name, "cfg", PATH_MAX)) {
+		return true;
+	}
+	// return false;
+	return true;
+}

@@ -45,11 +45,12 @@
 
 // 元数据相关变量
 
-// 保存主题索引
-#define BK_META_CONFIG_THEME "BK.config.theme" 
-
-#define BK_META_ISFOLDER "BK.isFolderList"
-
+#define BK_META_CONFIG_THEME        "BK.config.theme" 
+#define BK_META_ISFOLDER            "BK.isFolderList"
+#define BK_META_MASK_ENABLE         "BK.config.mask.enable"
+#define BK_META_MASK_GBA            "BK.config.mask.gba"
+#define BK_META_MASK_GBC            "BK.config.mask.gbc"
+#define BK_META_MASK_GB             "BK.config.mask.gb"
 
 
 
@@ -77,6 +78,7 @@ typedef struct {
 // ***********名称映射相关定义
 
 // ***** logo 显示相关定义
+#define BK_DEFAULT_LOGO_FILE "romfs:/switchbg.png"
 #define BK_LOGO_BASE_PATH "sdmc:/switch/mgba/logo"
 // ***** logo 显示相关定义
 
@@ -102,6 +104,8 @@ extern struct mGUIRunner* bk_global_runner;
     do { \
         mCoreConfigGetIntValue(&bk_global_runner->config, name, &(outVar)); \
     } while(0)
+
+
 
 
 
@@ -142,7 +146,7 @@ char* bk_util_remove_extension(const char* filename);
 char* bk_util_get_extension(const char* filename);
 char* bk_util_str_concatenate(const char* str1, const char* str2);
 char* bk_util_str_concatenate_multiple(int count, ...);
-
+bool _bk_mask_Extensions(const char* name);
 
 // =======绘图函数
 struct VFile* bk_util_open_png(const char* path, int mode);

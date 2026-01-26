@@ -45,6 +45,7 @@ add_custom_command(OUTPUT romfs.bin
                    COMMAND ${CMAKE_COMMAND} -E make_directory romfs
                    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/res/font-new.png" romfs/
                    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/res/font-cn.png" romfs/
+                   COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/res/switchbg.png" romfs/
                    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/fileassoc.cfg.in" romfs/
                    COMMAND ${BUILD_ROMFS} romfs romfs.bin
                    COMMAND ${CMAKE_COMMAND} -E remove_directory romfs
