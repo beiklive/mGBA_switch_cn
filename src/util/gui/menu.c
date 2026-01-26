@@ -108,8 +108,10 @@ enum GUIMenuExitReason GUIShowMenu(struct GUIParams* params, struct GUIMenu* men
 }
 
 static enum GUIMenuExitReason GUIMenuPollInput(struct GUIParams* params, struct GUIMenu* menu, struct GUIMenuState* state) {
+	int themeType = BK_THEME_DEFAULT;
+	BK_GLOBAL_INT_GET(BK_META_CONFIG_THEME, themeType);
 	size_t lineHeight = GUIFontHeight(params->font);
-	size_t pageSize = params->height / lineHeight;
+	size_t pageSize = themeType == BK_THEME_DEFAULT?  params->height / lineHeight : (params->height - BK_TITLE_TOP_OFFSET - BK_TITLE_BOTTOM_OFFSET) / (lineHeight + (themeType == BK_THEME_DEFAULT? 0 : BK_ITEM_PADDING));
 	if (pageSize > 4) {
 		pageSize -= 4;
 	} else {
@@ -179,7 +181,7 @@ static enum GUIMenuExitReason GUIMenuPollInput(struct GUIParams* params, struct 
 		state->start = menu->index;
 	}
 	// Move the view down if the active item is after the bottom of the view
-	while ((menu->index - state->start + 4) * lineHeight > params->height) {
+	while ((menu->index - state->start + 4) * lineHeight > (themeType == BK_THEME_DEFAULT?  params->height : params->height - BK_TITLE_TOP_OFFSET - BK_TITLE_BOTTOM_OFFSET - lineHeight)) {
 		// TODO: Should this loop be replaced with division?
 		++state->start;
 	}
@@ -245,7 +247,6 @@ static void GUIMenuDraw(struct GUIParams* params, const struct GUIMenu* menu, co
 		default:
 			break;
 		}
-		// printf("当前菜单项: %s, %s\n", item->title, bk_util_is_valid_rom_extension(item->title) ? "游戏文件" : "不是游戏");
 	}
 
 
@@ -270,7 +271,9 @@ static void GUIMenuDraw(struct GUIParams* params, const struct GUIMenu* menu, co
 	y += (themeType == BK_THEME_DEFAULT?  2 * lineHeight : BK_TITLE_TOP_OFFSET);
 	unsigned right;
 	GUIFontIconMetrics(params->font, GUI_ICON_SCROLLBAR_BUTTON, &right, 0);
-	size_t itemsPerScreen = (params->height - y - (themeType == BK_THEME_DEFAULT? 0 : BK_TITLE_BOTTOM_OFFSET)) / lineHeight;
+
+	size_t itemsPerScreen = (params->height - y - (themeType == BK_THEME_DEFAULT? 0 : BK_TITLE_BOTTOM_OFFSET)) / (lineHeight + (themeType == BK_THEME_DEFAULT? 0 : (BK_ITEM_PADDING + lineHeight)));
+	
 	size_t i;
 	for (i = state->start; i < GUIMenuItemListSize(&menu->items); ++i) {
 		int color = themeType == BK_THEME_DEFAULT? 0xE0A0A0A0 : BK_COLOR_BLACK;
@@ -283,12 +286,17 @@ static void GUIMenuDraw(struct GUIParams* params, const struct GUIMenu* menu, co
 			GUIFontDrawIcon(params->font, lineHeight * 0.8f, y, GUI_ALIGN_BOTTOM | GUI_ALIGN_RIGHT, GUI_ORIENT_0, color, GUI_ICON_POINTER);
 		}
 		// 检查是否有映射名称
+		if((themeType != BK_THEME_DEFAULT) && (y > (params->height - BK_TITLE_BOTTOM_OFFSET)))
+		{
+			break;
+		}
 		if(NULL == item->mappedTitle)
 		{
 			GUIFontPrint(params->font, item->readonly ? lineHeight * 3 / 2 : lineHeight, y, GUI_ALIGN_LEFT, color, item->title);
 		}else{
 			GUIFontPrint(params->font, item->readonly ? lineHeight * 3 / 2 : lineHeight, y, GUI_ALIGN_LEFT, color, item->mappedTitle);
 		}
+		// 绘制选项菜单
 		if (item->validStates && item->validStates[item->state]) {
 			GUIFontPrintf(params->font, params->width - right - 8, y, GUI_ALIGN_RIGHT, color, "%s ", item->validStates[item->state]);
 		}
@@ -297,7 +305,7 @@ static void GUIMenuDraw(struct GUIParams* params, const struct GUIMenu* menu, co
 			break;
 		}
 	}
-
+	// 绘制滚动条
 	if (itemsPerScreen < GUIMenuItemListSize(&menu->items)) {
 		size_t top = (themeType == BK_THEME_DEFAULT?  2 * lineHeight : BK_TITLE_TOP_OFFSET);
 		size_t bottom = params->height - (themeType == BK_THEME_DEFAULT? 8 : BK_TITLE_BOTTOM_OFFSET);

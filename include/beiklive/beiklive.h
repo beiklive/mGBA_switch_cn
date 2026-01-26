@@ -22,7 +22,7 @@
 #include "bk_theme.h"
 // ============ 常量定义 ============
 
-#define BK_TITLE_TOP_OFFSET 75
+#define BK_TITLE_TOP_OFFSET 80
 #define BK_TITLE_BOTTOM_OFFSET 75
 #define BK_ITEM_PADDING 10
 

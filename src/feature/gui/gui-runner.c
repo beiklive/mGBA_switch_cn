@@ -413,7 +413,9 @@ static void _updateLoading(size_t read, size_t size, void* context) {
 	if (runner->params.guiPrepare) {
 		runner->params.guiPrepare();
 	}
-	GUIFontPrintf(runner->params.font, runner->params.width / 2, (GUIFontHeight(runner->params.font) + runner->params.height) / 2, GUI_ALIGN_HCENTER, 0xFFFFFFFF, "加载中...%i%%", 100 * read / size);
+	int themeType = BK_THEME_DEFAULT;
+	BK_GLOBAL_INT_GET(BK_META_CONFIG_THEME, themeType);
+	GUIFontPrintf(runner->params.font, runner->params.width / 2, (GUIFontHeight(runner->params.font) + runner->params.height) / 2, GUI_ALIGN_HCENTER, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_BLACK, "加载中...%i%%", 100 * read / size);
 	if (runner->params.guiFinish) {
 		runner->params.guiFinish();
 	}
@@ -444,7 +446,8 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 		.index = 0,
 		.background = &drawState.d
 	};
-
+	int themeType = BK_THEME_DEFAULT;
+	BK_GLOBAL_INT_GET(BK_META_CONFIG_THEME, themeType);
 	GUIMenuItemListInit(&pauseMenu.items, 0);
 	GUIMenuItemListInit(&stateSaveMenu.items, 9);
 	GUIMenuItemListInit(&stateLoadMenu.items, 10);
@@ -486,7 +489,7 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 	if (runner->params.guiPrepare) {
 		runner->params.guiPrepare();
 	}
-	GUIFontPrint(runner->params.font, runner->params.width / 2, (GUIFontHeight(runner->params.font) + runner->params.height) / 2, GUI_ALIGN_HCENTER, 0xFFFFFFFF, "加载中...");
+	GUIFontPrint(runner->params.font, runner->params.width / 2, (GUIFontHeight(runner->params.font) + runner->params.height) / 2, GUI_ALIGN_HCENTER, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_BLACK, "加载中...");
 	if (runner->params.guiFinish) {
 		runner->params.guiFinish();
 	}
