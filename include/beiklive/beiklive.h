@@ -50,7 +50,6 @@
 #define BK_META_MASK_ENABLE         "BK.config.mask.enable"
 #define BK_META_MASK_GBA            "BK.config.mask.gba"
 #define BK_META_MASK_GBC            "BK.config.mask.gbc"
-#define BK_META_MASK_GB             "BK.config.mask.gb"
 
 
 

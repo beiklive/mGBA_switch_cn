@@ -421,7 +421,7 @@ static void _updateLoading(size_t read, size_t size, void* context) {
 	}
 	runner->params.drawEnd();
 }
-
+// BK_MARK mGUIRun  游戏运行循环
 void mGUIRun(struct mGUIRunner* runner, const char* path) {
 	struct mGUIBackground drawState = {
 		.d = {
@@ -661,11 +661,12 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 			}
 			runner->core->setKeys(runner->core, keys);
 			runner->core->runFrame(runner->core);
+			// 绘制游戏画面
 			if (runner->drawFrame) {
-				runner->params.drawStart();
+				runner->params.drawStart();  // 清空背景
 				runner->drawFrame(runner, false);
-				if (showOSD || drawFps) {
-					if (runner->params.guiPrepare) {
+				if (showOSD || drawFps) {// 绘制OSD和FPS
+					if (runner->params.guiPrepare) { // 调整视口
 						runner->params.guiPrepare();
 					}
 					if (drawFps) {
@@ -685,13 +686,13 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 							origin -= w + GUIFontHeight(runner->params.font) / 2;
 						}
 					}
-					if (runner->params.guiFinish) {
+					if (runner->params.guiFinish) { // 提交文字绘制
 						runner->params.guiFinish();
 					}
 				}
 				runner->params.drawEnd();
 
-				++frame;
+				++frame; // 帧数统计
 				if (frame % FPS_GRANULARITY == 0) {
 					if (drawFps) {
 						struct timeval tv;
@@ -847,6 +848,7 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 	mLOG(GUI_RUNNER, INFO, "Game stopped!");
 }
 
+// BK_MARK mGUIRunloop  程序启动循环
 void mGUIRunloop(struct mGUIRunner* runner) {
 	if (runner->keySources) {
 		mLOG(GUI_RUNNER, DEBUG, "Loading key sources for %s...", runner->config.port);
@@ -871,7 +873,7 @@ void mGUIRunloop(struct mGUIRunner* runner) {
 		mCoreConfigSetValue(&runner->config, "lastDirectory", runner->params.currentPath);
 		mCoreConfigSetValue(&runner->config, "lastGame", path);
 		BK_GLOBAL_INT_SET(BK_META_ISFOLDER, false);
-		mCoreConfigSave(&runner->config); // BKMARK: 保存配置函数
+		mCoreConfigSave(&runner->config);
 		
 		mGUIRun(runner, path); 
 	}

@@ -136,7 +136,6 @@ void mGUIShowMaskSet(struct mGUIRunner* runner)
 {
     char mask_name_gba[PATH_MAX] = {0};
     char mask_name_gbc[PATH_MAX] = {0};
-    char mask_name_gb[PATH_MAX] = {0};
     struct GUIMenu menu = {
 		.title = "遮罩设置",
 		.index = 0
@@ -157,15 +156,12 @@ void mGUIShowMaskSet(struct mGUIRunner* runner)
         // 更新显示文本
         const char* current_gba = mCoreConfigGetValue(&runner->config, BK_META_MASK_GBA);
         const char* current_gbc = mCoreConfigGetValue(&runner->config, BK_META_MASK_GBC);
-        const char* current_gb = mCoreConfigGetValue(&runner->config, BK_META_MASK_GB);
         
         // 使用缓冲区中的值或配置中的值
         const char* display_gba = mask_name_gba[0] ? mask_name_gba : 
                                  (current_gba && current_gba[0] ? current_gba : "未设置");
         const char* display_gbc = mask_name_gbc[0] ? mask_name_gbc : 
                                  (current_gbc && current_gbc[0] ? current_gbc : "未设置");
-        const char* display_gb = mask_name_gb[0] ? mask_name_gb : 
-                                (current_gb && current_gb[0] ? current_gb : "未设置");
         *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
             .title = "选择GBA遮罩",
             .data = GUI_V_S(BK_META_MASK_GBA),
@@ -175,11 +171,6 @@ void mGUIShowMaskSet(struct mGUIRunner* runner)
             .title = "选择GBC遮罩",
             .data = GUI_V_S(BK_META_MASK_GBC),
             .leftText = display_gbc,
-        };
-        *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-            .title = "选择GB遮罩",
-            .data = GUI_V_S(BK_META_MASK_GB),
-            .leftText = display_gb,
         };
         *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
             .title = "保存设置",
@@ -294,9 +285,6 @@ void mGUIShowMaskSet(struct mGUIRunner* runner)
 			if (mask_name_gbc[0]) {
 				mCoreConfigSetValue(&runner->config, BK_META_MASK_GBC, mask_name_gbc);
 			}
-			if (mask_name_gb[0]) {
-				mCoreConfigSetValue(&runner->config, BK_META_MASK_GB, mask_name_gb);
-			}
 
             // 保存数据变量  mCoreConfigSetIntValue
             mCoreConfigSave(&runner->config);
@@ -304,7 +292,6 @@ void mGUIShowMaskSet(struct mGUIRunner* runner)
             // 清除缓冲区，使用新配置的值
             memset(mask_name_gba, 0, PATH_MAX);
             memset(mask_name_gbc, 0, PATH_MAX);
-            memset(mask_name_gb, 0, PATH_MAX);
             GUIShowMessageBox(&runner->params, GUI_MESSAGE_BOX_OK, 240, "保存完成!");
         }else
         {
@@ -319,12 +306,6 @@ void mGUIShowMaskSet(struct mGUIRunner* runner)
             {
                 if (!GUISelectFile(&runner->params, mask_name_gbc, sizeof(mask_name_gbc), _bk_mask_Extensions, NULL, NULL)) {
                     mask_name_gbc[0] = '\0';
-                }
-            }
-            if(GUIVariantCompareString(item->data, BK_META_MASK_GB))
-            {
-                if (!GUISelectFile(&runner->params, mask_name_gb, sizeof(mask_name_gb), _bk_mask_Extensions, NULL, NULL)) {
-                    mask_name_gb[0] = '\0';
                 }
             }
         }

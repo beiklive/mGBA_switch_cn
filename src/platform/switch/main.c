@@ -235,7 +235,7 @@ static void _mapKey(struct mInputMap* map, uint32_t binding, int nativeKey, int 
 	mInputBindKey(map, binding, __builtin_ctz(nativeKey), key);
 }
 
-// 开始绘制新的一帧
+// BKMARK _drawStart  清空背景
 static void _drawStart(void) {
 	int themeType = BK_THEME_DEFAULT;
 	BK_GLOBAL_INT_GET(BK_META_CONFIG_THEME, themeType);
@@ -248,7 +248,7 @@ static void _drawStart(void) {
 	glClear(GL_COLOR_BUFFER_BIT);
 }
 
-// 结束绘制并呈现到屏幕
+// BKMARK _drawEnd 结束绘制并呈现到屏幕
 static void _drawEnd(void) {
 	// 如果启用帧率限制或超过帧数限制
 	if (frameLimiter || framecount >= framecap) {
@@ -472,7 +472,7 @@ static void _gameUnloaded(struct mGUIRunner* runner) {
 	memcpy(&values[3], &vibrationStop, sizeof(rumble.value));
 	hidSendVibrationValues(vibrationDeviceHandles, values, 4);
 }
-// 将游戏画面纹理绘制到屏幕上的函数
+// BKMARK _drawTex 将游戏画面纹理绘制到屏幕上的函数
 static void _drawTex(
 	struct mGUIRunner* runner,   // GUI 运行上下文
 	unsigned width,              // 输入纹理宽度（游戏画面宽）
@@ -758,7 +758,7 @@ static void _prepareForFrame(struct mGUIRunner* runner) {
 	}
 }
 
-// 绘制游戏画面
+// BKMARK _drawFrame 绘制游戏画面
 static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 	++framecount;
 	// 如果未启用帧率限制且未达到帧数上限，则跳过绘制
