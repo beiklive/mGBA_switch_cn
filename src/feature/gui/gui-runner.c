@@ -90,24 +90,31 @@ static struct mGUILogger {
 static bool _testExtensions(const char* name) {
 	char ext[PATH_MAX] = {};
 	separatePath(name, NULL, NULL, ext);
-
-	if (!strncmp(ext, "sav", PATH_MAX)) {
-		return false;
+	if (!strncmp(ext, "GBA", PATH_MAX)) {
+		return true;
 	}
-	if (!strncmp(ext, "png", PATH_MAX)) {
-		return false;
+	if (!strncmp(ext, "GBC", PATH_MAX)) {
+		return true;
 	}
-	if (!strncmp(ext, "ini", PATH_MAX)) {
-		return false;
+	if (!strncmp(ext, "GB", PATH_MAX)) {
+		return true;
 	}
-	if (!strncmp(ext, "cheats", PATH_MAX)) {
-		return false;
+	if (!strncmp(ext, "ZIP", PATH_MAX)) {
+		return true;
 	}
-	if (!strncmp(ext, "ss", 2)) {
-		return false;
+	if (!strncmp(ext, "gba", PATH_MAX)) {
+		return true;
 	}
-
-	return true;
+	if (!strncmp(ext, "gbc", PATH_MAX)) {
+		return true;
+	}
+	if (!strncmp(ext, "gb", PATH_MAX)) {
+		return true;
+	}
+	if (!strncmp(ext, "zip", PATH_MAX)) {
+		return true;
+	}
+	return false;
 }
 // BKMARK 全局运行器的背景绘制函数(有游戏画面的时候绘制游戏帧)
 static void _drawBackground(struct GUIBackground* background, void* context) {
@@ -304,6 +311,8 @@ void mGUIInit(struct mGUIRunner* runner, const char* port) {
 	// TODO: Do we need to load more defaults?
 	// BKMARK 设置项默认值
 	mCoreConfigSetDefaultIntValue(&runner->config, BK_META_ISFOLDER, true);
+	mCoreConfigSetDefaultIntValue(&runner->config, BK_META_MASK_ENABLE, false);
+	mCoreConfigSetDefaultIntValue(&runner->config, BK_META_PATH_BACKGROUND_ENABLE, false);
 	mCoreConfigSetDefaultIntValue(&runner->config, BK_META_CONFIG_THEME, BK_THEME_DEFAULT);
 
 
@@ -884,7 +893,10 @@ void mGUIRunloop(struct mGUIRunner* runner) {
 		}
 		BK_GLOBAL_INT_SET(BK_META_ISFOLDER, true);
 		BK_GLOBAL_INT_SET(BK_PRO_STATUS, BK_RUNNING_TYPE_FILELIST);
+		BK_GLOBAL_INT_SET(BK_META_FOLDER_TARGET, BK_META_FOLDER_TARGET_ROM);
 		
+
+
 		if (!GUISelectFile(&runner->params, path, sizeof(path), _testExtensions, NULL, preselect)) {
 			break;
 		}

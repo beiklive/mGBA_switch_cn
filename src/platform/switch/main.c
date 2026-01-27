@@ -639,68 +639,60 @@ static void _drawTex(
 // BKMARK 自定义背景绘制函数
 
 // 绘制游戏画面纹理到指定位置和大小
-static void _drawTexCustom(struct mGUIRunner* runner,
-                          unsigned texWidth, unsigned texHeight,
-                          bool faded, bool blendTop)
-{
+// static void _drawTexCustom(struct mGUIRunner* runner,
+//                           bool faded, bool blendTop)
+// {
 
-    glViewport(0, 1080 - vheight, vwidth, vheight);
+//     glViewport(0, 1080 - vheight, vwidth, vheight);
 
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+//     glEnable(GL_BLEND);
+//     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	
-	glTexParameteri(
-		GL_TEXTURE_2D,
-		GL_TEXTURE_MAG_FILTER,
-		filterMode == FM_LINEAR ? GL_LINEAR : GL_NEAREST
-	);
+// 	glTexParameteri(
+// 		GL_TEXTURE_2D,
+// 		GL_TEXTURE_MAG_FILTER,
+// 		filterMode == FM_LINEAR ? GL_LINEAR : GL_NEAREST
+// 	);
 
-    glUseProgram(program);
-    glBindVertexArray(vao);
+//     glUseProgram(program);
+//     glBindVertexArray(vao);
 
-	// 保存输入纹理尺寸为浮点数
-	float inwidth = texWidth;
-	float inheight = texHeight;
+// 	// 保存输入纹理尺寸为浮点数
+// 	float inwidth = texWidth;
+// 	float inheight = texHeight;
 
-	// 计算输入纹理与视口的宽高比例
-	float aspectX = inwidth / (float) vwidth;
-	float aspectY = inheight / (float) vheight;
-
-
-    // 纹理相关 uniform
-    glUniform1i(texLocation, 0);
-    glUniform2f(dimsLocation, 1.0f, 1.0f);
-
-	// if (usePbo) {
-	// 	// 设置输入纹理尺寸相对值（通常用于特殊缩放）
-	// 	glUniform2f(insizeLocation, width / 256.f, height / 256.f);
-	// } else {
-	// 	// 否则使用默认值
-	// 	glUniform2f(insizeLocation, 1, 1);
-	// }
-	glUniform2f(insizeLocation, 1, 1);
+// 	// 计算输入纹理与视口的宽高比例
+// 	float aspectX = inwidth / (float) vwidth;
+// 	float aspectY = inheight / (float) vheight;
 
 
-    if (!faded) {
-        glUniform4f(colorLocation, 1.0f, 1.0f, 1.0f, blendTop ? 0.5f : 1.0f);
-    } else {
-        glUniform4f(colorLocation, 0.8f, 0.8f, 0.8f, blendTop ? 0.4f : 0.8f);
-    }
+//     // 纹理相关 uniform
+//     glUniform1i(texLocation, 0);
+//     glUniform2f(dimsLocation, 1.0f, 1.0f);
 
-    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+// 	glUniform2f(insizeLocation, 1, 1);
 
-    glBindVertexArray(0);
-    glUseProgram(0);
-    glDisable(GL_BLEND);
 
-    // 恢复主 viewport
-    glViewport(
-        0,
-        1080 - runner->params.height,
-        runner->params.width,
-        runner->params.height
-    );
-}
+//     if (!faded) {
+//         glUniform4f(colorLocation, 1.0f, 1.0f, 1.0f, blendTop ? 0.5f : 1.0f);
+//     } else {
+//         glUniform4f(colorLocation, 0.8f, 0.8f, 0.8f, blendTop ? 0.4f : 0.8f);
+//     }
+
+//     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+//     glBindVertexArray(0);
+//     glUseProgram(0);
+//     glDisable(GL_BLEND);
+
+//     // 恢复主 viewport
+//     glViewport(
+//         0,
+//         1080 - runner->params.height,
+//         runner->params.width,
+//         runner->params.height
+//     );
+// }
 static void _drawTexMask(struct mGUIRunner* runner,
                           unsigned texWidth, unsigned texHeight,
                           bool faded, bool blendTop)
@@ -771,19 +763,12 @@ void _drawGameMask(struct mGUIRunner* runner, int maskType){
     }
 }
 
-static void _drawBKImage(struct mGUIRunner* runner, const color_t* pixels, 
-                                 unsigned width, unsigned height, bool faded, bool isSame) {
+static void _drawBKImage(struct mGUIRunner* runner, const color_t* pixels) {
     // 上传像素数据到纹理
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, bkTex);
-	if(!isSame)		
-	{
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, 
-			GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-	}	
-
     // 绘制到指定位置和大小
-    _drawTexCustom(runner, width, height, faded, false);
+    _drawTexMask(runner, 256, 224, false, false);
 }
 
 
@@ -1523,7 +1508,8 @@ int main(int argc, char* argv[]) {
 
 	// ===================beiklive
 	mkdir(BK_CONFIG_BASE_PATH, 0755);
-	mkdir(BK_LOGO_BASE_PATH, 0755);
+	mkdir(BK_BACKGROUND_BASE_PATH, 0755);
+	mkdir(BK_OVERLAY_BASE_PATH, 0755);
 	if (!bk_config_init()) {
         printf("配置管理器初始化失败\n");
         return 1;
@@ -1542,6 +1528,23 @@ int main(int argc, char* argv[]) {
 	if(current_gbc){
 		bk_init_mask_texture(current_gbc, 1);
 	}
+	int isBgEnabled = 0;
+	BK_GLOBAL_INT_GET(BK_META_PATH_BACKGROUND_ENABLE, isBgEnabled);
+	const char* current_bg = mCoreConfigGetValue(&runner.config, BK_META_PATH_BACKGROUND);
+	if(isBgEnabled)
+	{
+		if(current_bg){
+			char* path = bk_util_str_concatenate("sdmc:", current_bg);
+			bk_init_menu_background(path);
+			free(path);
+		}else{
+			bk_init_menu_background(BK_DEFAULT_LOGO_FILE);
+		}
+	}else{
+		bk_init_menu_background(BK_DEFAULT_LOGO_FILE);
+	}
+
+
 	// ===================beiklive
 
 

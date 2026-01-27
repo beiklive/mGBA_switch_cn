@@ -20,6 +20,7 @@
 
 #include "bk_log.h"
 #include "bk_theme.h"
+#include "stb_image.h"
 // ============ 常量定义 ============
 
 #define BK_TITLE_TOP_OFFSET 80
@@ -47,11 +48,14 @@
 #define BK_PRO_STATUS               "BK.pro.status"
 #define BK_META_CONFIG_THEME        "BK.config.theme" 
 #define BK_META_ISFOLDER            "BK.isFolderList"
+#define BK_META_FOLDER_TARGET       "BK.folder.target"   // 目标文件夹
 #define BK_META_MASK_ENABLE         "BK.config.mask.enable"
 #define BK_META_MASK_STATUS_GBA         "BK.config.mask.status.gba"
 #define BK_META_MASK_STATUS_GBC         "BK.config.mask.status.gbc"
 #define BK_META_MASK_GBA            "BK.config.mask.gba"
 #define BK_META_MASK_GBC            "BK.config.mask.gbc"
+#define BK_META_PATH_BACKGROUND_ENABLE     "BK.config.path.background.enable"
+#define BK_META_PATH_BACKGROUND     "BK.config.path.background"
 
 
 enum BK_RUNNING_TYPE {
@@ -62,7 +66,13 @@ enum BK_RUNNING_TYPE {
     BK_RUNNING_TYPE_MAX
 };
 
-
+enum BK_META_FOLDER_TARGET_TYPE {
+    BK_META_FOLDER_TARGET_NONE,
+    BK_META_FOLDER_TARGET_ROM,
+    BK_META_FOLDER_TARGET_BACKGROUND,
+    BK_META_FOLDER_TARGET_MASK,
+    BK_META_FOLDER_TARGET_MAX
+};
 
 
 
@@ -86,7 +96,12 @@ typedef struct {
 
 // ***** logo 显示相关定义
 #define BK_DEFAULT_LOGO_FILE "romfs:/switchbg.png"
-#define BK_LOGO_BASE_PATH "sdmc:/switch/mgba/logo"
+#define BK_BACKGROUND_BASE_PATH "sdmc:/switch/mgba/backgrounds/"
+#define BK_BACKGROUND_PATH "/switch/mgba/backgrounds/"
+#define BK_OVERLAY_BASE_PATH "sdmc:/switch/mgba/overlays/"
+#define BK_OVERLAY_PATH "/switch/mgba/overlays/"
+#define BK_HOME_PATH "/"
+
 // ***** logo 显示相关定义
 
 
@@ -187,7 +202,7 @@ extern GLuint bkvao;                 // 顶点数组对象
 bool bk_opengl_init(void);
 void bk_opengl_deinit(void);
 void bk_init_mask_texture(const char* filepath, int maskType);
-
+int bk_init_menu_background(const char* filepath);
 
 
 

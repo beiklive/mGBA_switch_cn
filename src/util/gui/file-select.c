@@ -334,6 +334,33 @@ bool GUISelectFile(struct GUIParams* params, char* outPath, size_t outLen, bool 
 		.image = 0,
 		.screenshotId = 0
 	};
+	int curpath = 0;
+	BK_GLOBAL_INT_GET(BK_META_FOLDER_TARGET, curpath);
+	char curpath_str[PATH_MAX] = {0};
+
+	if(curpath == BK_META_FOLDER_TARGET_BACKGROUND)
+	{
+		strncpy(curpath_str, BK_BACKGROUND_PATH, PATH_MAX - 1);
+		strncpy(params->currentPath, curpath_str, PATH_MAX - 1);
+	}
+	else if(curpath == BK_META_FOLDER_TARGET_MASK)
+	{
+		strncpy(curpath_str, BK_OVERLAY_PATH, PATH_MAX - 1);
+		strncpy(params->currentPath, curpath_str, PATH_MAX - 1);
+	}else{
+		const char* lastPath = mCoreConfigGetValue(&bk_global_runner->config, "lastDirectory");
+		if (lastPath) {
+			struct VDir* dir = VDirOpen(lastPath);
+			if (dir) {
+				dir->close(dir);
+				strncpy(bk_global_runner->params.currentPath, lastPath, PATH_MAX - 1);
+			}
+		}
+	}
+	bk_global_runner->params.currentPath[PATH_MAX - 1] = '\0';
+	printf("curpath_str:%s\n", params->currentPath);
+	BK_GLOBAL_INT_SET(BK_META_FOLDER_TARGET, BK_META_FOLDER_TARGET_NONE);
+
 
 	strlcpy(mappSubtitle, process_path_with_mapping(params->currentPath), PATH_MAX);
 

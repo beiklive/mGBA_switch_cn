@@ -3,6 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+
+#define STB_IMAGE_IMPLEMENTATION
+#include <beiklive/stb_image.h>
+
 // 内部数据结构
 typedef struct {
 	bk_config_item_t* items;

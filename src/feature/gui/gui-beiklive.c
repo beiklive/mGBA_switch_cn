@@ -24,6 +24,7 @@ enum BKGUIAction{
     BK_CONFIG_STATUS_4,
 	BK_CONFIG_MAPNAME,
     BK_CONFIG_MASK,
+    BK_CONFIG_BACKGROUND,
 	BK_CONFIG_SAVE
 };
 
@@ -299,6 +300,7 @@ void mGUIShowMaskSet(struct mGUIRunner* runner)
         {
             if(GUIVariantCompareString(item->data, BK_META_MASK_GBA))
             {
+                BK_GLOBAL_INT_SET(BK_META_FOLDER_TARGET, BK_META_FOLDER_TARGET_MASK);
                 if (!GUISelectFile(&runner->params, mask_name_gba, sizeof(mask_name_gba), _bk_mask_Extensions, NULL, NULL)) {
                     mask_name_gba[0] = '\0';
                 }
@@ -306,6 +308,7 @@ void mGUIShowMaskSet(struct mGUIRunner* runner)
 
             if(GUIVariantCompareString(item->data, BK_META_MASK_GBC))
             {
+                BK_GLOBAL_INT_SET(BK_META_FOLDER_TARGET, BK_META_FOLDER_TARGET_MASK);
                 if (!GUISelectFile(&runner->params, mask_name_gbc, sizeof(mask_name_gbc), _bk_mask_Extensions, NULL, NULL)) {
                     mask_name_gbc[0] = '\0';
                 }
@@ -316,6 +319,181 @@ void mGUIShowMaskSet(struct mGUIRunner* runner)
 
     GUIMenuItemListDeinit(&menu.items);
 }
+
+
+void mGUIBackgroundSet(struct mGUIRunner* runner)
+{
+    char background_name[PATH_MAX] = {0};
+    struct GUIMenu menu = {
+		.title = "菜单背景图片设置",
+		.index = 0
+	};
+    GUIMenuItemListInit(&menu.items, 0);
+    // UI循环处理按键和UI更新
+    while(true){
+        *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+            .title = "是否启用背景图片(不启用会使用默认背景)",
+            .data = GUI_V_S(BK_META_PATH_BACKGROUND_ENABLE),
+            .submenu = 0,
+            .state = 0,
+            .validStates = (const char*[]) {
+                "不启用", "启用"
+            },
+            .nStates = 2
+        };
+        const char* current_bg = mCoreConfigGetValue(&runner->config, BK_META_PATH_BACKGROUND);
+        
+        const char* display_bg = background_name[0] ? background_name : 
+                                 (current_bg && current_bg[0] ? current_bg : "未设置");
+        *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+            .title = "选择背景图片",
+            .data = GUI_V_S(BK_META_PATH_BACKGROUND),
+            .leftText = display_bg,
+        };
+        *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+            .title = "保存设置",
+            .data = GUI_V_U(BK_CONFIG_SAVE),
+        };
+        *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+            .title = "返回",
+            .data = GUI_V_V,
+        };
+
+
+        // 读取配置数据
+        struct GUIMenuItem* item;
+        for (int i = 0; i < GUIMenuItemListSize(&menu.items); ++i) {
+            item = GUIMenuItemListGetPointer(&menu.items, i);
+            if (!item->validStates || GUIVariantIsVoid(item->data)) {
+                continue;
+            }
+            if (GUIVariantIsString(item->data)) {
+                if (item->stateMappings) {
+                    size_t j;
+                    for (j = 0; j < item->nStates; ++j) {
+                        const struct GUIVariant* v = &item->stateMappings[j];
+                        struct GUIVariant test;
+                        switch (v->type) {
+                        case GUI_VARIANT_VOID:
+                            if (!mCoreConfigGetValue(&runner->config, item->data.v.s)) {
+                                item->state = j;
+                                break;
+                            }
+                            break;
+                        case GUI_VARIANT_UNSIGNED:
+                            if (mCoreConfigGetUIntValue(&runner->config, item->data.v.s, &test.v.u) && test.v.u == v->v.u) {
+                                item->state = j;
+                                break;
+                            }
+                            break;
+                        case GUI_VARIANT_INT:
+                            if (mCoreConfigGetIntValue(&runner->config, item->data.v.s, &test.v.i) && test.v.i == v->v.i) {
+                                item->state = j;
+                                break;
+                            }
+                            break;
+                        case GUI_VARIANT_FLOAT:
+                            if (mCoreConfigGetFloatValue(&runner->config, item->data.v.s, &test.v.f) && fabsf(test.v.f - v->v.f) <= 1e-3f) {
+                                item->state = j;
+                                break;
+                            }
+                            break;
+                        case GUI_VARIANT_STRING:
+                            test.v.s = mCoreConfigGetValue(&runner->config, item->data.v.s);
+                            if (test.v.s && strcmp(test.v.s, v->v.s) == 0) {
+                                item->state = j;
+                                break;						
+                            }
+                            break;
+                        case GUI_VARIANT_POINTER:
+                            break;
+                        }
+                    }
+                } else {
+                    mCoreConfigGetUIntValue(&runner->config, item->data.v.s, &item->state);
+                }
+            }
+        }
+
+
+
+		enum GUIMenuExitReason reason = GUIShowMenu(&runner->params, &menu, &item);
+        if (reason != GUI_MENU_EXIT_ACCEPT || GUIVariantIsVoid(item->data)) {
+            GUIMenuItemListClear(&menu.items);
+			break;
+		}
+        enum BKGUIAction action = (enum BKGUIAction) item->data.v.u;
+        if(action == BK_CONFIG_SAVE)
+        {
+            for (int i = 0; i < GUIMenuItemListSize(&menu.items); ++i) {
+                item = GUIMenuItemListGetPointer(&menu.items, i);
+				if (!item->validStates || !GUIVariantIsString(item->data)) {
+					continue;
+				}
+                if (item->stateMappings) {
+					const struct GUIVariant* v = &item->stateMappings[item->state];
+					switch (v->type) {
+					case GUI_VARIANT_VOID:
+						mCoreConfigSetValue(&runner->config, item->data.v.s, NULL);
+						break;
+					case GUI_VARIANT_UNSIGNED:
+						mCoreConfigSetUIntValue(&runner->config, item->data.v.s, v->v.u);
+						break;
+					case GUI_VARIANT_INT:
+						mCoreConfigSetUIntValue(&runner->config, item->data.v.s, v->v.i);
+						break;
+					case GUI_VARIANT_FLOAT:
+						mCoreConfigSetFloatValue(&runner->config, item->data.v.s, v->v.f);
+						break;
+					case GUI_VARIANT_STRING:
+						mCoreConfigSetValue(&runner->config, item->data.v.s, v->v.s);
+						break;
+					case GUI_VARIANT_POINTER:
+						break;
+					}
+                }
+                else
+                {
+                    mCoreConfigSetUIntValue(&runner->config, item->data.v.s, item->state);
+                }
+            }
+            int isBgEnabled = 0;
+            BK_GLOBAL_INT_GET(BK_META_PATH_BACKGROUND_ENABLE, isBgEnabled);
+			if (background_name[0]) {
+				mCoreConfigSetValue(&runner->config, BK_META_PATH_BACKGROUND, background_name);
+                if(isBgEnabled)
+                {
+                    char* path = bk_util_str_concatenate("sdmc:", background_name);
+                    bk_init_menu_background(path);
+                    free(path);
+                }else{
+                    bk_init_menu_background(BK_DEFAULT_LOGO_FILE);
+                }
+			}
+
+            // 保存数据变量  mCoreConfigSetIntValue
+            mCoreConfigSave(&runner->config);
+			mCoreLoadForeignConfig(runner->core, &runner->config);
+            // 清除缓冲区，使用新配置的值
+            memset(background_name, 0, PATH_MAX);
+            GUIShowMessageBox(&runner->params, GUI_MESSAGE_BOX_OK, 240, "保存完成!");
+        }else
+        {
+            if(GUIVariantCompareString(item->data, BK_META_PATH_BACKGROUND))
+            {
+                BK_GLOBAL_INT_SET(BK_META_FOLDER_TARGET, BK_META_FOLDER_TARGET_BACKGROUND);
+                if (!GUISelectFile(&runner->params, background_name, sizeof(background_name), _bk_mask_Extensions, NULL, NULL)) {
+                    background_name[0] = '\0';
+                }
+            }
+        }
+        GUIMenuItemListClear(&menu.items);
+    }
+
+    GUIMenuItemListDeinit(&menu.items);
+}
+
+
 
 void mGUIShowBeiklive(struct mGUIRunner* runner) {
     // UI 初始化
@@ -344,6 +522,10 @@ void mGUIShowBeiklive(struct mGUIRunner* runner) {
     *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
 		.title = "遮罩设置",
 		.data = GUI_V_U(BK_CONFIG_MASK),
+	};
+    *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+		.title = "菜单背景图片设置(仅在switch风格下有效)",
+		.data = GUI_V_U(BK_CONFIG_BACKGROUND),
 	};
     *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
 		.title = "保存设置",
@@ -436,6 +618,9 @@ void mGUIShowBeiklive(struct mGUIRunner* runner) {
             break;
         case BK_CONFIG_MASK:
             mGUIShowMaskSet(runner);
+            break;
+        case BK_CONFIG_BACKGROUND:
+            mGUIBackgroundSet(runner);
             break;
         case BK_CONFIG_SAVE:
             for (int i = 0; i < GUIMenuItemListSize(&menu.items); ++i) {
