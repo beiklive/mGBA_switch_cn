@@ -709,11 +709,7 @@ static void _drawTexMask(struct mGUIRunner* runner,
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	
-	glTexParameteri(
-		GL_TEXTURE_2D,
-		GL_TEXTURE_MAG_FILTER,
-		filterMode == FM_LINEAR ? GL_LINEAR : GL_NEAREST
-	);
+
 
     glUseProgram(bkProgram);
     glBindVertexArray(vao);
@@ -731,13 +727,6 @@ static void _drawTexMask(struct mGUIRunner* runner,
     glUniform1i(bktexLocation, 0);
     glUniform2f(bkdimsLocation, 1.0f, 1.0f);
 
-	// if (usePbo) {
-	// 	// 设置输入纹理尺寸相对值（通常用于特殊缩放）
-	// 	glUniform2f(insizeLocation, width / 256.f, height / 256.f);
-	// } else {
-	// 	// 否则使用默认值
-	// 	glUniform2f(insizeLocation, 1, 1);
-	// }
 	glUniform2f(bkinsizeLocation, 1, 1);
 
 

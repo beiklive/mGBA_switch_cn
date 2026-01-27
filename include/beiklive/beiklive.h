@@ -182,7 +182,8 @@ extern GLuint bktexLocation;         // 纹理uniform位置
 extern GLuint bkdimsLocation;        // 尺寸uniform位置
 extern GLuint bkinsizeLocation;      // 输入大小uniform位置
 extern GLuint bkcolorLocation;       // 颜色uniform位置
-
+extern GLuint bkvbo;                 // 顶点缓冲对象
+extern GLuint bkvao;                 // 顶点数组对象
 
 bool bk_opengl_init(void);
 void bk_opengl_deinit(void);

@@ -669,8 +669,7 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 			// 绘制游戏画面
 			if (runner->drawFrame) {
 				runner->params.drawStart();  // 清空背景
-				runner->drawFrame(runner, false);
-
+				
 				// ========== 添加遮罩绘制 ==========
 				int isMaskEnabled = 0;
 				BK_GLOBAL_INT_GET(BK_META_MASK_ENABLE, isMaskEnabled);
@@ -681,7 +680,8 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 					runner->drawGameMask(runner, platform);
 				}
 				// ========== 遮罩绘制结束 ==========
-
+				runner->drawFrame(runner, false);
+				
 				if (showOSD || drawFps) {// 绘制OSD和FPS
 					if (runner->params.guiPrepare) { // 调整视口
 						runner->params.guiPrepare();

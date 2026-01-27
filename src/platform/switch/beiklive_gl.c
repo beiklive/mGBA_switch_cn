@@ -8,6 +8,16 @@ GLuint bktexLocation;         // 纹理uniform位置
 GLuint bkdimsLocation;        // 尺寸uniform位置
 GLuint bkinsizeLocation;      // 输入大小uniform位置
 GLuint bkcolorLocation;       // 颜色uniform位置
+GLuint bkvbo;                 // 顶点缓冲对象
+GLuint bkvao;                 // 顶点数组对象
+
+// 定义四边形顶点的偏移坐标（0-1范围）
+static const GLfloat _offsets[] = {
+	0.f, 0.f,  // 左下角
+	1.f, 0.f,  // 右下角
+	1.f, 1.f,  // 右上角
+	0.f, 1.f,  // 左上角
+};
 
 color_t* pixels = NULL;
 
@@ -36,11 +46,10 @@ const char* const _vertexShader =
 const char* const _fragmentShader =
 	"varying vec2 texCoord;\n"     // 纹理坐标
 	"uniform sampler2D tex;\n"     // 游戏画面纹理
-	"uniform vec4 color;\n"        // 颜色调制
+	"uniform vec4 color;\n"        // 颜色调制（只使用RGB）
 
 	"void main() {\n"
 	"	vec4 texColor = texture2D(tex, texCoord);\n"
-	"	texColor *= color;\n"
 	"	gl_FragColor = texColor;\n"
 	"}";
 
@@ -62,6 +71,21 @@ const char* const _fragmentShader =
 	bkcolorLocation = glGetUniformLocation(bkProgram, "color");
 	bkdimsLocation = glGetUniformLocation(bkProgram, "dims");
 	bkinsizeLocation = glGetUniformLocation(bkProgram, "insize");
+
+	GLuint offsetLocation = glGetAttribLocation(bkProgram, "offset");
+
+	// 创建顶点缓冲和数组对象
+	glGenBuffers(1, &bkvbo);
+	glGenVertexArrays(1, &bkvao);
+	glBindVertexArray(bkvao);
+	glBindBuffer(GL_ARRAY_BUFFER, bkvbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(_offsets), _offsets, GL_STATIC_DRAW);
+	glVertexAttribPointer(offsetLocation, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+	glEnableVertexAttribArray(offsetLocation);
+	glBindVertexArray(0);
+
+
+
 	// BKMARK 背景绘制纹理
 	glGenTextures(1, &bkTex);
 	glBindTexture(GL_TEXTURE_2D, bkTex);
