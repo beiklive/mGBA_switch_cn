@@ -537,8 +537,6 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 	if (runner->core->platform(runner->core) == mPLATFORM_GBA) {
 		runner->core->setPeripheral(runner->core, mPERIPH_GBA_LUMINANCE, &runner->luminanceSource.d);
 	}
-	// 保存游戏类型
-	BK_GLOBAL_INT_SET(BK_META_GAME_TYPE, runner->core->platform(runner->core));
 
 	mLOG(GUI_RUNNER, DEBUG, "Loading config...");
 	mCoreLoadForeignConfig(runner->core, &runner->config);
@@ -670,6 +668,7 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 			if (runner->drawFrame) {
 				runner->params.drawStart();  // 清空背景
 				
+				runner->drawFrame(runner, false);
 				// ========== 添加遮罩绘制 ==========
 				int isMaskEnabled = 0;
 				BK_GLOBAL_INT_GET(BK_META_MASK_ENABLE, isMaskEnabled);
@@ -680,7 +679,6 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 					runner->drawGameMask(runner, platform);
 				}
 				// ========== 遮罩绘制结束 ==========
-				runner->drawFrame(runner, false);
 				
 				if (showOSD || drawFps) {// 绘制OSD和FPS
 					if (runner->params.guiPrepare) { // 调整视口
@@ -753,6 +751,7 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 		GUIInvalidateKeys(&runner->params);
 		uint32_t keys = 0xFFFFFFFF; // Huge hack to avoid an extra variable!
 		struct GUIMenuItem* item;
+		runner->params.drawStart();
 		enum GUIMenuExitReason reason = GUIShowMenu(&runner->params, &pauseMenu, &item);
 		if (reason == GUI_MENU_EXIT_ACCEPT && item->data.type == GUI_VARIANT_UNSIGNED) {
 			switch (item->data.v.u & RUNNER_COMMAND_MASK) {

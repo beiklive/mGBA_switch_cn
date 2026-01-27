@@ -57,16 +57,26 @@ const char* const _fragmentShader =
     GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
     GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
     
-    glShaderSource(vertexShader, 1, &_vertexShader, NULL);
+    const GLchar* shaderBuffer[2];
+	shaderBuffer[0] = _gles2Header;
+	shaderBuffer[1] = _vertexShader;
+
+    glShaderSource(vertexShader, 2, shaderBuffer, NULL);
     glCompileShader(vertexShader);
     
-    glShaderSource(fragmentShader, 1, &_fragmentShader, NULL);
+    shaderBuffer[1] = _fragmentShader;
+    glShaderSource(fragmentShader, 2, shaderBuffer, NULL);
     glCompileShader(fragmentShader);
     
     bkProgram = glCreateProgram();
     glAttachShader(bkProgram, vertexShader);
     glAttachShader(bkProgram, fragmentShader);
     glLinkProgram(bkProgram);
+
+	// 删除着色器对象
+	glDeleteShader(vertexShader);
+	glDeleteShader(fragmentShader);
+
 	bktexLocation = glGetUniformLocation(bkProgram, "tex");
 	bkcolorLocation = glGetUniformLocation(bkProgram, "color");
 	bkdimsLocation = glGetUniformLocation(bkProgram, "dims");

@@ -80,7 +80,7 @@ static const char* const _vertexShader =
 
 // 片段着色器：计算最终像素颜色
 static const char* const _fragmentShader =
-	"varying vec2 texCoord;\n"     // 纹理坐标
+	"varying vec2 texCoord;\n"     // 接收顶点纹理坐标
 	"uniform sampler2D tex;\n"     // 游戏画面纹理
 	"uniform vec4 color;\n"        // 颜色调制
 
@@ -240,11 +240,13 @@ static void _drawStart(void) {
 	int themeType = BK_THEME_DEFAULT;
 	BK_GLOBAL_INT_GET(BK_META_CONFIG_THEME, themeType);
 	int type;
-	BK_GLOBAL_INT_GET(BK_META_GAME_TYPE, type);
-	if (themeType == BK_THEME_DEFAULT || type == BK_RUNNING_TYPE_MENU) {
+	BK_GLOBAL_INT_GET(BK_PRO_STATUS, type);
+	if (themeType == BK_THEME_DEFAULT || type == BK_RUNNING_TYPE_GAME) {
 		glClearColor(0.f, 0.f, 0.f, 1.f);
 	} else if (themeType == BK_THEME_SWITCH) {
 		glClearColor(235.0f/255.0f, 235.0f/255.0f, 235.0f/255.0f, 1.0f);
+	}else{
+		glClearColor(0.f, 0.f, 0.f, 1.f);
 	}
 	// 清空颜色缓冲
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -577,7 +579,7 @@ static void _drawTex(
 	// 设置纹理采样单元（使用 0 号纹理）
 	glUniform1i(texLocation, 0);
 
-	// 设置输出尺寸比例（用于顶点或片段着色器）
+	// 设置输出尺寸比例（用于顶点或片段着色器） 绘制区域大小（缩放和居中）
 	glUniform2f(dimsLocation, aspectX, aspectY);
 
 	// 如果使用 PBO（Pixel Buffer Object）
@@ -589,7 +591,7 @@ static void _drawTex(
 		glUniform2f(insizeLocation, 1, 1);
 	}
 
-	// 根据是否淡化来设置颜色和透明度
+	// 实现淡入淡出、画面变暗等效果
 	if (!faded) {
 
 		// 正常亮度
@@ -712,7 +714,7 @@ static void _drawTexMask(struct mGUIRunner* runner,
 
 
     glUseProgram(bkProgram);
-    glBindVertexArray(vao);
+    glBindVertexArray(bkvao);
 
 	// 保存输入纹理尺寸为浮点数
 	float inwidth = texWidth;
@@ -765,7 +767,7 @@ void _drawGameMask(struct mGUIRunner* runner, int maskType){
             glBindTexture(GL_TEXTURE_2D, bkMaskTexGBC);
         }
 
-		_drawTexCustom(runner, 256, 224, false, false);
+		_drawTexMask(runner, 256, 224, false, false);
     }
 }
 

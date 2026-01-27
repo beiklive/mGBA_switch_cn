@@ -52,7 +52,6 @@
 #define BK_META_MASK_STATUS_GBC         "BK.config.mask.status.gbc"
 #define BK_META_MASK_GBA            "BK.config.mask.gba"
 #define BK_META_MASK_GBC            "BK.config.mask.gbc"
-#define BK_META_GAME_TYPE           "BK.game.type"
 
 
 enum BK_RUNNING_TYPE {
