@@ -349,7 +349,7 @@ void mGUIBackgroundSet(struct mGUIRunner* runner)
         const char* display_bg = background_name[0] ? background_name : 
                                  (current_bg && current_bg[0] ? current_bg : "未设置");
         // 有背景就拷贝到background_name
-        if(current_bg && current_bg[0])
+        if(!background_name[0] && current_bg && current_bg[0])
         {
             strlcpy(background_name, current_bg, sizeof(background_name));
         }
