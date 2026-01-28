@@ -515,7 +515,7 @@ void mGUIShowBeiklive(struct mGUIRunner* runner) {
 		.submenu = 0,
 		.state = 0,
 		.validStates = (const char*[]) {
-			"原版黑白", "switch风格"
+			"原版黑白", "自定义风格"
 		},
 		.nStates = 2
 	};
@@ -524,7 +524,7 @@ void mGUIShowBeiklive(struct mGUIRunner* runner) {
 		.data = GUI_V_U(BK_CONFIG_MASK),
 	};
     *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "菜单背景图片设置(仅在switch风格下有效)",
+		.title = "菜单背景图片设置(仅在自定义风格下有效)",
 		.data = GUI_V_U(BK_CONFIG_BACKGROUND),
 	};
     *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
