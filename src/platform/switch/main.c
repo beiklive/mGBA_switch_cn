@@ -572,6 +572,16 @@ static void _drawTex(
 		aspectY = height / (float) vheight;
 	}
 
+	if (SM_PA == screenMode)
+	{
+		int game = runner->core->platform(runner->core) == mPLATFORM_GBA ? 0 : 1;
+		if(game == 1)
+		{
+			aspectX = 1120.0f/1920.0f;
+			aspectY = 1008.0f/1080.0f;
+			max = 1.0f;
+		}
+	}
 	// 应用最终缩放因子
 	aspectX *= max;
 	aspectY *= max;
