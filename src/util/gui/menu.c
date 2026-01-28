@@ -227,27 +227,10 @@ static void GUIMenuDraw(struct GUIParams* params, const struct GUIMenu* menu, co
 
 	size_t lineHeight = GUIFontHeight(params->font);
 	params->drawStart(); // 背景全部涂黑
-	if (menu->background && !menu->bkbg) {
+	if (menu->background) {
 		menu->background->draw(menu->background, GUIMenuItemListGetConstPointer(&menu->items, menu->index)->data.v.p);
 	}
-	if(menu->background && (menu->bkbg > BK_NONE) && (themeType == BK_THEME_SWITCH))
-	{
-		switch (menu->bkbg)
-		{
-		case BK_WINDOW:
-			// 绘制窗口背景
-			menu->background->draw(menu->background, NULL);
-			break;
-		case BK_MASK:
-			/* code */
-			break;
-		case BK_LOGO:
-			/* code */
-			break;
-		default:
-			break;
-		}
-	}
+
 
 
 	// 调整视口大小用于全屏绘制文字

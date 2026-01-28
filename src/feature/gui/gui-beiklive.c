@@ -40,6 +40,7 @@ void mGUIShowMapName(struct mGUIRunner* runner) {
 
     struct GUIMenu menu = {
 		.title = "游戏名称映射",
+        .background = &runner->background.d,
 		.index = 0
 	};
     GUIMenuItemListInit(&menu.items, 0);
@@ -139,6 +140,7 @@ void mGUIShowMaskSet(struct mGUIRunner* runner)
     char mask_name_gbc[PATH_MAX] = {0};
     struct GUIMenu menu = {
 		.title = "遮罩设置",
+        .background = &runner->background.d,
 		.index = 0
 	};
     GUIMenuItemListInit(&menu.items, 0);
@@ -326,6 +328,7 @@ void mGUIBackgroundSet(struct mGUIRunner* runner)
     char background_name[PATH_MAX] = {0};
     struct GUIMenu menu = {
 		.title = "菜单背景图片设置",
+        .background = &runner->background.d,
 		.index = 0
 	};
     GUIMenuItemListInit(&menu.items, 0);
@@ -345,6 +348,12 @@ void mGUIBackgroundSet(struct mGUIRunner* runner)
         
         const char* display_bg = background_name[0] ? background_name : 
                                  (current_bg && current_bg[0] ? current_bg : "未设置");
+        // 有背景就拷贝到background_name
+        if(current_bg && current_bg[0])
+        {
+            strlcpy(background_name, current_bg, sizeof(background_name));
+        }
+
         *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
             .title = "选择背景图片",
             .data = GUI_V_S(BK_META_PATH_BACKGROUND),
@@ -459,7 +468,10 @@ void mGUIBackgroundSet(struct mGUIRunner* runner)
             }
             int isBgEnabled = 0;
             BK_GLOBAL_INT_GET(BK_META_PATH_BACKGROUND_ENABLE, isBgEnabled);
+            printf("isBgEnabled:%d\n", isBgEnabled);
+
 			if (background_name[0]) {
+                printf("background_name:%s\n", background_name);
 				mCoreConfigSetValue(&runner->config, BK_META_PATH_BACKGROUND, background_name);
                 if(isBgEnabled)
                 {
@@ -469,7 +481,12 @@ void mGUIBackgroundSet(struct mGUIRunner* runner)
                 }else{
                     bk_init_menu_background(BK_DEFAULT_LOGO_FILE);
                 }
-			}
+			}else{
+                if(!isBgEnabled)
+                {
+                    bk_init_menu_background(BK_DEFAULT_LOGO_FILE);
+                }
+            }
 
             // 保存数据变量  mCoreConfigSetIntValue
             mCoreConfigSave(&runner->config);

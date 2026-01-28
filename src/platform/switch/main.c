@@ -1514,8 +1514,7 @@ int main(int argc, char* argv[]) {
         printf("配置管理器初始化失败\n");
         return 1;
     }
-    // 获取全局运行器指针
-	bk_global_runner = &runner;
+
 
 	BK_LOG_INIT(BK_LOG_LEVEL_DEBUG, 1, 1);
 
@@ -1545,6 +1544,7 @@ int main(int argc, char* argv[]) {
 	}
 
 
+	
 	// ===================beiklive
 
 

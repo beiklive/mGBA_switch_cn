@@ -120,9 +120,23 @@ static bool _testExtensions(const char* name) {
 static void _drawBackground(struct GUIBackground* background, void* context) {
 	UNUSED(context);
 	struct mGUIBackground* gbaBackground = (struct mGUIBackground*) background;
-	if (gbaBackground->p->drawFrame) {
-		gbaBackground->p->drawFrame(gbaBackground->p, true);
+
+	int useCustomeTheme = false;
+	if(!bk_global_runner)
+		return;
+	mCoreConfigGetIntValue(&bk_global_runner->config, BK_META_CONFIG_THEME, &useCustomeTheme);
+	if (useCustomeTheme == BK_THEME_SWITCH) {
+		if (gbaBackground->p->drawBKImage) {
+			gbaBackground->p->drawBKImage(gbaBackground->p, NULL);
+		}
+	}else{
+		if (gbaBackground->p->drawFrame) {
+			gbaBackground->p->drawFrame(gbaBackground->p, true);
+		}
 	}
+
+
+
 }
 
 // BKMARK 保存和读取状态的背景绘制函数(画存档截图)
@@ -293,6 +307,7 @@ static void _tryAutosave(struct mGUIRunner* runner) {
 }
 
 void mGUIInit(struct mGUIRunner* runner, const char* port) {
+	bk_global_runner = runner;
 	GUIInit(&runner->params);
 	runner->port = port;
 	runner->core = NULL;

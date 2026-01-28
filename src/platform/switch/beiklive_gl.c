@@ -128,16 +128,14 @@ void _bk_util_draw_menu_background(struct GUIBackground* background, void* title
 {
     UNUSED(title);
     struct mGUIBackground* gbaBackground = (struct mGUIBackground*) background;
-    if(gbaBackground->p->drawBKImage)
+    int themeType = BK_THEME_DEFAULT;
+	BK_GLOBAL_INT_GET(BK_META_CONFIG_THEME, themeType);
+    if(gbaBackground->p->drawBKImage && themeType == BK_THEME_SWITCH)
     {
-        int isBgEnabled = 0;
-        BK_GLOBAL_INT_GET(BK_META_PATH_BACKGROUND_ENABLE, isBgEnabled);
-        if (isBgEnabled) {
-            gbaBackground->p->drawBKImage(
-                gbaBackground->p,
-                gbaBackground->image
-            );
-        }
+        gbaBackground->p->drawBKImage(
+            gbaBackground->p,
+            gbaBackground->image
+        );
     }
 
 }
