@@ -916,9 +916,13 @@ uint32_t calculate_hash(const void* data, size_t length) {
 
 
 bool _bk_mask_Extensions(const char* name) {
-	if (!strncmp(name, "cfg", PATH_MAX)) {
+		char ext[PATH_MAX] = {};
+	separatePath(name, NULL, NULL, ext);
+	if (!strncmp(ext, "png", PATH_MAX)) {
 		return true;
 	}
-	// return false;
-	return true;
+	if (!strncmp(ext, "PNG", PATH_MAX)) {
+		return true;
+	}
+	return false;
 }

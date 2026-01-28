@@ -637,63 +637,7 @@ static void _drawTex(
 
 
 // BKMARK 自定义背景绘制函数
-
-// 绘制游戏画面纹理到指定位置和大小
-// static void _drawTexCustom(struct mGUIRunner* runner,
-//                           bool faded, bool blendTop)
-// {
-
-//     glViewport(0, 1080 - vheight, vwidth, vheight);
-
-//     glEnable(GL_BLEND);
-//     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	
-// 	glTexParameteri(
-// 		GL_TEXTURE_2D,
-// 		GL_TEXTURE_MAG_FILTER,
-// 		filterMode == FM_LINEAR ? GL_LINEAR : GL_NEAREST
-// 	);
-
-//     glUseProgram(program);
-//     glBindVertexArray(vao);
-
-// 	// 保存输入纹理尺寸为浮点数
-// 	float inwidth = texWidth;
-// 	float inheight = texHeight;
-
-// 	// 计算输入纹理与视口的宽高比例
-// 	float aspectX = inwidth / (float) vwidth;
-// 	float aspectY = inheight / (float) vheight;
-
-
-//     // 纹理相关 uniform
-//     glUniform1i(texLocation, 0);
-//     glUniform2f(dimsLocation, 1.0f, 1.0f);
-
-// 	glUniform2f(insizeLocation, 1, 1);
-
-
-//     if (!faded) {
-//         glUniform4f(colorLocation, 1.0f, 1.0f, 1.0f, blendTop ? 0.5f : 1.0f);
-//     } else {
-//         glUniform4f(colorLocation, 0.8f, 0.8f, 0.8f, blendTop ? 0.4f : 0.8f);
-//     }
-
-//     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-
-//     glBindVertexArray(0);
-//     glUseProgram(0);
-//     glDisable(GL_BLEND);
-
-//     // 恢复主 viewport
-//     glViewport(
-//         0,
-//         1080 - runner->params.height,
-//         runner->params.width,
-//         runner->params.height
-//     );
-// }
-static void _drawTexMask(struct mGUIRunner* runner,
+static void _drawTexBackground(struct mGUIRunner* runner,
                           unsigned texWidth, unsigned texHeight,
                           bool faded, bool blendTop)
 {
@@ -744,6 +688,56 @@ static void _drawTexMask(struct mGUIRunner* runner,
         runner->params.height
     );
 }
+static void _drawTexMask(struct mGUIRunner* runner,
+                          unsigned texWidth, unsigned texHeight,
+                          bool faded, bool blendTop)
+{
+
+    glViewport(0, 1080 - vheight, vwidth, vheight);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	
+
+
+    glUseProgram(bkProgram);
+    glBindVertexArray(bkvao);
+
+	// 保存输入纹理尺寸为浮点数
+	float inwidth = texWidth;
+	float inheight = texHeight;
+
+	// 计算输入纹理与视口的宽高比例
+	float aspectX = inwidth / (float) vwidth;
+	float aspectY = inheight / (float) vheight;
+
+
+    // 纹理相关 uniform
+    glUniform1i(bktexLocation, 0);
+    glUniform2f(bkdimsLocation, 1.0f, 1.0f);
+
+	glUniform2f(bkinsizeLocation, 1, 1);
+
+    if (!faded) {
+        glUniform4f(bkcolorLocation, 1.0f, 1.0f, 1.0f, blendTop ? 0.5f : 1.0f);
+    } else {
+        glUniform4f(bkcolorLocation, 0.8f, 0.8f, 0.8f, blendTop ? 0.4f : 0.8f);
+    }
+
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+    glBindVertexArray(0);
+    glUseProgram(0);
+    glDisable(GL_BLEND);
+
+    // 恢复主 viewport
+    glViewport(
+        0,
+        1080 - runner->params.height,
+        runner->params.width,
+        runner->params.height
+    );
+}
 void _drawGameMask(struct mGUIRunner* runner, int maskType){
     int haveTexture = 0;
     BK_GLOBAL_INT_GET(maskType == 0 ? BK_META_MASK_STATUS_GBA : BK_META_MASK_STATUS_GBC, haveTexture);
@@ -768,7 +762,7 @@ static void _drawBKImage(struct mGUIRunner* runner, const color_t* pixels) {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, bkTex);
     // 绘制到指定位置和大小
-    _drawTexMask(runner, 256, 224, false, false);
+    _drawTexBackground(runner, 256, 224, false, false);
 }
 
 
