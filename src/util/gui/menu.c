@@ -239,16 +239,16 @@ static void GUIMenuDraw(struct GUIParams* params, const struct GUIMenu* menu, co
 	}
 	unsigned y = lineHeight;
 
-	GUIFontPrint(params->font, themeType == BK_THEME_DEFAULT? 0 : y, isFold && themeType != BK_THEME_DEFAULT ? y * 1.5f : y, GUI_ALIGN_LEFT, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_BLACK, menu->title);
+	GUIFontPrint(params->font, themeType == BK_THEME_DEFAULT? 0 : y, isFold && themeType != BK_THEME_DEFAULT ? y * 1.5f : y, GUI_ALIGN_LEFT, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_TEXT, menu->title);
 	
 	if (menu->subtitle) {
 		if(isFold && themeType != BK_THEME_DEFAULT)
 		{
-			GUIFontPrint(params->font, lineHeight, params->height - BK_TITLE_BOTTOM_OFFSET + lineHeight*1.5f, GUI_ALIGN_LEFT, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_BLACK, menu->subtitle);
+			GUIFontPrint(params->font, lineHeight, params->height - BK_TITLE_BOTTOM_OFFSET + lineHeight*1.5f, GUI_ALIGN_LEFT, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_TEXT, menu->subtitle);
 		}
 		else
 		{
-			GUIFontPrint(params->font, 0, y + lineHeight, GUI_ALIGN_LEFT, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_BLACK, menu->subtitle);
+			GUIFontPrint(params->font, 0, y + lineHeight, GUI_ALIGN_LEFT, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_TEXT, menu->subtitle);
 		}
 	}
 	y += (themeType == BK_THEME_DEFAULT?  2 * lineHeight : BK_TITLE_TOP_OFFSET);
@@ -259,11 +259,11 @@ static void GUIMenuDraw(struct GUIParams* params, const struct GUIMenu* menu, co
 	
 	size_t i;
 	for (i = state->start; i < GUIMenuItemListSize(&menu->items); ++i) {
-		int color = themeType == BK_THEME_DEFAULT? 0xE0A0A0A0 : BK_COLOR_BLACK;
+		int color = themeType == BK_THEME_DEFAULT? 0xE0A0A0A0 : BK_COLOR_TEXT;
 		const struct GUIMenuItem* item = GUIMenuItemListGetConstPointer(&menu->items, i);
 		// 根据当前选择的菜单项改变图标
 		if (i == menu->index) {
-			color = item->readonly ? (themeType == BK_THEME_DEFAULT? 0xD0909090 : BK_COLOR_BLACK) : (themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_BLUE);
+			color = (themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_TEXT_SELECT);
 			// 	printf("当前菜单项: %s, %s\n", item->title, bk_util_is_valid_rom_extension(item->title) ? "游戏文件" : "不是游戏");
 			// beiklive  可以在这里绘制 背景图片   但是需要提前读取图片到缓存
 			GUIFontDrawIcon(params->font, lineHeight * 0.8f, y, GUI_ALIGN_BOTTOM | GUI_ALIGN_RIGHT, GUI_ORIENT_0, color, GUI_ICON_POINTER);
@@ -300,19 +300,19 @@ static void GUIMenuDraw(struct GUIParams* params, const struct GUIMenu* menu, co
 		unsigned w;
 		GUIFontIconMetrics(params->font, GUI_ICON_SCROLLBAR_TRACK, &w, 0);
 		right = (right - w) / 2;
-		GUIFontDrawIconSize(params->font, params->width - right - 8, top, 0, bottom - top, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_BLACK, GUI_ICON_SCROLLBAR_TRACK);
-		GUIFontDrawIcon(params->font, params->width - 8, top, GUI_ALIGN_HCENTER | GUI_ALIGN_BOTTOM, GUI_ORIENT_VMIRROR, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_BLACK, GUI_ICON_SCROLLBAR_BUTTON);
-		GUIFontDrawIcon(params->font, params->width - 8, bottom, GUI_ALIGN_HCENTER | GUI_ALIGN_TOP, GUI_ORIENT_0, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_BLACK, GUI_ICON_SCROLLBAR_BUTTON);
+		GUIFontDrawIconSize(params->font, params->width - right - 8, top, 0, bottom - top, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_TEXT, GUI_ICON_SCROLLBAR_TRACK);
+		GUIFontDrawIcon(params->font, params->width - 8, top, GUI_ALIGN_HCENTER | GUI_ALIGN_BOTTOM, GUI_ORIENT_VMIRROR, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_TEXT, GUI_ICON_SCROLLBAR_BUTTON);
+		GUIFontDrawIcon(params->font, params->width - 8, bottom, GUI_ALIGN_HCENTER | GUI_ALIGN_TOP, GUI_ORIENT_0, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_TEXT, GUI_ICON_SCROLLBAR_BUTTON);
 
 		y = menu->index * (bottom - top - 16) / GUIMenuItemListSize(&menu->items);
-		GUIFontDrawIcon(params->font, params->width - 8, top + y, GUI_ALIGN_HCENTER | GUI_ALIGN_TOP, GUI_ORIENT_0, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_BLACK, GUI_ICON_SCROLLBAR_THUMB);
+		GUIFontDrawIcon(params->font, params->width - 8, top + y, GUI_ALIGN_HCENTER | GUI_ALIGN_TOP, GUI_ORIENT_0, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_TEXT, GUI_ICON_SCROLLBAR_THUMB);
 	}
 
 	GUIDrawBattery(params);
 	GUIDrawClock(params);
 
 	if (state->cursor != GUI_CURSOR_NOT_PRESENT) {
-		GUIFontDrawIcon(params->font, state->cx, state->cy, GUI_ALIGN_HCENTER | GUI_ALIGN_TOP, GUI_ORIENT_0, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_BLACK, GUI_ICON_CURSOR);
+		GUIFontDrawIcon(params->font, state->cx, state->cy, GUI_ALIGN_HCENTER | GUI_ALIGN_TOP, GUI_ORIENT_0, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_TEXT, GUI_ICON_CURSOR);
 	}
 
 	if (params->guiFinish) {
@@ -349,8 +349,11 @@ enum GUIMenuExitReason GUIShowMessageBox(struct GUIParams* params, int buttons, 
 		if (params->guiPrepare) {
 			params->guiPrepare();
 		}
+		if(bk_global_runner->drawBKImage){
+			bk_global_runner->drawBKImage(bk_global_runner, NULL);
+		}
 		// 绘制消息弹窗的文字
-		GUIFontPrint(params->font, params->width / 2, (GUIFontHeight(params->font) + params->height) / 2, GUI_ALIGN_HCENTER, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_BLACK, message);
+		GUIFontPrint(params->font, params->width / 2, (GUIFontHeight(params->font) + params->height) / 2, GUI_ALIGN_HCENTER, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_TEXT, message);
 		if (params->guiFinish) {
 			params->guiFinish();
 		}
@@ -398,7 +401,7 @@ void GUIDrawBattery(struct GUIParams* params) {
 	}
 	int themeType = BK_THEME_DEFAULT;
 	BK_GLOBAL_INT_GET(BK_META_CONFIG_THEME, themeType);
-	uint32_t color;
+	uint32_t color = 0xFF000000;
 	if(themeType == BK_THEME_DEFAULT)
 	{
 		color = 0xFF000000;
@@ -416,17 +419,39 @@ void GUIDrawBattery(struct GUIParams* params) {
 	}
 	else if(themeType == BK_THEME_SWITCH)
 	{
-		color = 0xFF000000;
-		if ((state & (BATTERY_CHARGING | BATTERY_FULL)) == (BATTERY_CHARGING | BATTERY_FULL)) {
-			color |= 0x1F1F1F;
-		} else if (state & BATTERY_CHARGING) {
-			color |= 0x1F1F1F;
-		} else if ((state & BATTERY_VALUE) >= BATTERY_HALF) {
-			color |= 0x1F1F1F;
-		} else if ((state & BATTERY_VALUE) >= BATTERY_LOW) {
-			color |= 0x30FFFF;
-		} else {
-			color |= 0x30FFFF;
+		if ((state & (BATTERY_CHARGING | BATTERY_FULL)) == (BATTERY_CHARGING | BATTERY_FULL))  {
+        	color = BK_COLOR_HELPER(BK_CONFIG_COLOR_BLUE);  // 显示蓝色（充满）
+		}
+		// 检查是否正在充电（但未满）
+		else if (state & BATTERY_CHARGING) {
+			color = BK_COLOR_HELPER(BK_CONFIG_COLOR_ORANGE);  // 显示橙色（充电中）
+		}
+		// 非充电状态，根据电量值获取渐变颜色
+		else {
+			int batteryLevel = state & BATTERY_VALUE;  // 获取电量值（0-100）
+			
+			// 使用之前定义的 getBatteryColor 函数获取RGBA颜色
+			uint32_t rgba_color;
+			
+			// 根据电量值选择不同的颜色
+			if (batteryLevel >= BATTERY_HIGH) {
+				// 高电量（75-100%）：使用绿色渐变
+				rgba_color = _bk_getBatteryColor(batteryLevel);
+			} else if (batteryLevel >= BATTERY_HALF) {
+				// 中等电量（50-74%）：使用黄绿色渐变
+				rgba_color = _bk_getBatteryColor(batteryLevel);
+			} else if (batteryLevel >= BATTERY_LOW) {
+				// 低电量（25-49%）：使用黄色/橙色渐变
+				rgba_color = _bk_getBatteryColor(batteryLevel);
+			} else if (batteryLevel > BATTERY_EMPTY) {
+				// 极低电量（1-24%）：使用红色渐变
+				rgba_color = _bk_getBatteryColor(batteryLevel);
+			} else {
+				// 空电量（0%）：红色
+				rgba_color = 0xFF0000FF;  // 纯红色
+			}
+			
+			color = _bk_rgba_to_abgr(rgba_color);
 		}
 	}
 
@@ -456,7 +481,7 @@ void GUIDrawBattery(struct GUIParams* params) {
 	if (state & BATTERY_PERCENTAGE_VALID) {
 		unsigned width;
 		GUIFontIconMetrics(params->font, batteryIcon, &width, NULL);
-		GUIFontPrintf(params->font, params->width - width, GUIFontHeight(params->font), GUI_ALIGN_RIGHT, color, "%u%%", state & BATTERY_VALUE);
+		GUIFontPrintf(params->font, params->width - width, GUIFontHeight(params->font), GUI_ALIGN_RIGHT, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_TEXT, "%u%%", state & BATTERY_VALUE);
 	}
 }
 
@@ -468,5 +493,5 @@ void GUIDrawClock(struct GUIParams* params) {
 	struct tm tm;
 	localtime_r(&t, &tm);
 	strftime(buffer, sizeof(buffer), "%H:%M:%S", &tm);
-	GUIFontPrint(params->font, params->width / 2, GUIFontHeight(params->font) , GUI_ALIGN_HCENTER, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_BLACK, buffer);
+	GUIFontPrint(params->font, params->width / 2, GUIFontHeight(params->font) , GUI_ALIGN_HCENTER, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_TEXT, buffer);
 }

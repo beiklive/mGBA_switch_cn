@@ -23,15 +23,47 @@
 #include "stb_image.h"
 // ============ 常量定义 ============
 
+// 主题相关偏移
 #define BK_TITLE_TOP_OFFSET 80
 #define BK_TITLE_BOTTOM_OFFSET 75
 #define BK_ITEM_PADDING 10
 
-// 颜色
-#define BK_COLOR_BLACK 0xFF1F1F1F
-#define BK_COLOR_WHITE 0xFFFFFFFF
-#define BK_COLOR_BLUE  0xFFf00505
+// 颜色处理相关
+enum BK_CONFIG_COLOR_TYPE {
+    BK_CONFIG_COLOR_BLACK,
+    BK_CONFIG_COLOR_WHITE,
+    BK_CONFIG_COLOR_RED,
+    BK_CONFIG_COLOR_GREEN,
+    BK_CONFIG_COLOR_BLUE,
+    BK_CONFIG_COLOR_ORANGE,
+    BK_CONFIG_COLOR_YELLOW,
+    BK_CONFIG_COLOR_GRAY,
+    BK_CONFIG_COLOR_MAX
+};
 
+#define BK_RGBA_BLACK       0x1F1F1FFF      // 黑色
+#define BK_RGBA_WHITE       0xFFFFFFFF      // 白色
+#define BK_RGBA_RED         0xFF0000FF      // 红色
+#define BK_RGBA_GREEN       0x00FF00FF      // 绿色
+#define BK_RGBA_BLUE        0x0000FFFF      // 蓝色
+#define BK_RGBA_ORANGE      0xFF8000FF      // 橙色
+#define BK_RGBA_YELLOW      0xFFFF00FF      // 黄色
+#define BK_RGBA_GRAY        0x808080FF      // 灰色
+
+#define BK_COLOR_WHITE 0xFFFFFFFF    // 不改动， 与初始主题相关
+
+extern uint32_t g_bk_config_color[BK_CONFIG_COLOR_MAX];
+extern uint32_t g_bk_color_text_select;
+extern uint32_t g_bk_color_text;
+
+#define BK_COLOR_HELPER(color) (_bk_rgba_to_abgr(g_bk_config_color[color]))
+
+
+#define BK_COLOR_TEXT_SELECT_SET(value) g_bk_color_text_select = BK_COLOR_HELPER(value)
+#define BK_COLOR_TEXT_SET(value)        g_bk_color_text = BK_COLOR_HELPER(value)
+
+#define BK_COLOR_TEXT_SELECT  g_bk_color_text_select
+#define BK_COLOR_TEXT         g_bk_color_text   // 自定义主题 颜色
 
 
 // ***********名称映射相关定义
@@ -45,19 +77,25 @@
 
 
 // 元数据相关变量
-#define BK_PRO_STATUS               "BK.pro.status"
-#define BK_META_CONFIG_THEME        "BK.config.theme" 
-#define BK_META_ISFOLDER            "BK.isFolderList"
-#define BK_META_FOLDER_TARGET       "BK.folder.target"   // 目标文件夹
-#define BK_META_MASK_ENABLE         "BK.config.mask.enable"
-#define BK_META_MASK_STATUS_GBA         "BK.config.mask.status.gba"
-#define BK_META_MASK_STATUS_GBC         "BK.config.mask.status.gbc"
-#define BK_META_MASK_GBA            "BK.config.mask.gba"
-#define BK_META_MASK_GBC            "BK.config.mask.gbc"
-#define BK_META_PATH_BACKGROUND_ENABLE     "BK.config.path.background.enable"
-#define BK_META_PATH_BACKGROUND     "BK.config.path.background"
+// 字符串类型
+#define BK_META_FOLDER_TARGET       "BK.folder.target"              // 展开文件列表时的初始文件夹
+#define BK_META_MASK_GBA            "BK.config.mask.gba"            // gba遮罩的路径
+#define BK_META_MASK_GBC            "BK.config.mask.gbc"            // gbc遮罩的路径
+#define BK_META_PATH_BACKGROUND     "BK.config.path.background"     // 背景图片的路径
 
 
+// 数字类型
+#define BK_PRO_STATUS                       "BK.pro.status"                    // 程序当前状态（列表 菜单  游戏）
+#define BK_META_CONFIG_THEME                "BK.config.theme"                  // 主题类型
+#define BK_META_ISFOLDER                    "BK.isFolderList"                  // 是否为文件列表
+#define BK_META_MASK_ENABLE                 "BK.config.mask.enable"            // 是否启用遮罩
+#define BK_META_MASK_STATUS_GBA             "BK.config.mask.status.gba"        // gba遮罩状态
+#define BK_META_MASK_STATUS_GBC             "BK.config.mask.status.gbc"        // gbc遮罩状态
+#define BK_META_PATH_BACKGROUND_ENABLE      "BK.config.path.background.enable" // 是否启用背景图片
+#define BK_META_TEXT_COLOR_TYPE             "BK.text.color.type"        // 文本颜色类型
+#define BK_META_HOVER_TEXT_COLOR_TYPE       "BK.hover.text.color.type"  // 悬停文本颜色类型
+
+// 程序当前状态（列表 菜单  游戏）
 enum BK_RUNNING_TYPE {
     BK_RUNNING_TYPE_NONE = 0,
     BK_RUNNING_TYPE_FILELIST,
@@ -65,7 +103,7 @@ enum BK_RUNNING_TYPE {
     BK_RUNNING_TYPE_MENU,
     BK_RUNNING_TYPE_MAX
 };
-
+// 展开文件列表时的初始文件夹
 enum BK_META_FOLDER_TARGET_TYPE {
     BK_META_FOLDER_TARGET_NONE,
     BK_META_FOLDER_TARGET_ROM,
@@ -82,9 +120,10 @@ enum BK_META_FOLDER_TARGET_TYPE {
 
 
 // 配置文件路径
-#define BK_CONFIG_FILE_PATH "sdmc:/switch/mgba/name_map.cfg"
-#define BK_CONFIG_BASE_PATH "sdmc:/switch/mgba"
-#define BK_CONFIG_MAPDIR_PREFIX "mgba_dir"
+#define BK_CONFIG_FILE_PATH         "sdmc:/mGBA/name_map.cfg"
+#define BK_CONFIG_BASE_PATH         "sdmc:/mGBA"
+// 配置文件名映射前缀
+#define BK_CONFIG_MAPDIR_PREFIX     "mgba_dir"
 
 // 配置项结构体
 typedef struct {
@@ -95,12 +134,12 @@ typedef struct {
 // ***********名称映射相关定义
 
 // ***** logo 显示相关定义
-#define BK_DEFAULT_LOGO_FILE "romfs:/switchbg.png"
-#define BK_BACKGROUND_BASE_PATH "sdmc:/switch/mgba/backgrounds/"
-#define BK_BACKGROUND_PATH "/switch/mgba/backgrounds/"
-#define BK_OVERLAY_BASE_PATH "sdmc:/switch/mgba/overlays/"
-#define BK_OVERLAY_PATH "/switch/mgba/overlays/"
-#define BK_HOME_PATH "/"
+#define BK_DEFAULT_LOGO_FILE        "romfs:/switchbg.png"
+#define BK_BACKGROUND_BASE_PATH     "sdmc:/mGBA/backgrounds/"
+#define BK_OVERLAY_BASE_PATH        "sdmc:/mGBA/overlays/"
+#define BK_BACKGROUND_PATH          "/mGBA/backgrounds/"
+#define BK_OVERLAY_PATH             "/mGBA/overlays/"
+#define BK_HOME_PATH                "/"
 
 // ***** logo 显示相关定义
 
@@ -175,7 +214,8 @@ struct VFile* bk_util_open_png(const char* path, int mode);
 void _bk_util_draw_menu_background(struct GUIBackground* background, void*  title);
 float bk_calc_insize(unsigned realSize);
 uint32_t calculate_hash(const void* data, size_t length);
-
+uint32_t _bk_rgba_to_abgr(uint32_t rgba);
+uint32_t _bk_getBatteryColor(int batteryLevel);
 
 // oopengl 相关函数
 // 背景纹理类型

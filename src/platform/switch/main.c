@@ -574,9 +574,9 @@ static void _drawTex(
 
 	if (SM_PA == screenMode)
 	{
-		int game = runner->core->platform(runner->core) == mPLATFORM_GBA ? 0 : 1;
-		if(game == 1)
+		if(runner->core->platform(runner->core) == mPLATFORM_GB)
 		{
+			// GB/GBC 的像素精确模式 适配部分滤镜
 			aspectX = 1120.0f/1920.0f;
 			aspectY = 1008.0f/1080.0f;
 			max = 1.0f;
@@ -1546,6 +1546,13 @@ int main(int argc, char* argv[]) {
 	}else{
 		bk_init_menu_background(BK_DEFAULT_LOGO_FILE);
 	}
+	
+	int colorType = 0;
+	BK_GLOBAL_INT_GET(BK_META_TEXT_COLOR_TYPE, colorType);
+	BK_COLOR_TEXT_SET(colorType);
+	int hoverColorType = 0;
+	BK_GLOBAL_INT_GET(BK_META_HOVER_TEXT_COLOR_TYPE, hoverColorType);
+	BK_COLOR_TEXT_SELECT_SET(hoverColorType);
 
 
 	

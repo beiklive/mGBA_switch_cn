@@ -25,6 +25,19 @@ BK_LogConfig g_bk_log_config = {
 // 初始键值对
 static const char* DEFAULT_CONFIG[] = { "mgba=Switch Game", NULL };
 
+uint32_t g_bk_color_text_select = BK_RGBA_BLUE;
+uint32_t g_bk_color_text = BK_RGBA_BLACK;
+uint32_t g_bk_config_color[BK_CONFIG_COLOR_MAX] = {
+	BK_RGBA_BLACK ,
+	BK_RGBA_WHITE ,
+	BK_RGBA_RED   ,
+	BK_RGBA_GREEN ,
+	BK_RGBA_BLUE  ,
+	BK_RGBA_ORANGE,
+	BK_RGBA_YELLOW,
+	BK_RGBA_GRAY  
+};
+
 // ============ 内部辅助函数 ============
 
 /**
@@ -914,6 +927,71 @@ uint32_t calculate_hash(const void* data, size_t length) {
     return hash;
 }
 
+// 颜色转换
+uint32_t _bk_rgba_to_abgr(uint32_t rgba) {
+    // RGBA格式: 0xRRGGBBAA
+    // ABGR格式: 0xAABBGGRR
+    
+    uint8_t r = (rgba >> 24) & 0xFF;  // 红色
+    uint8_t g = (rgba >> 16) & 0xFF;  // 绿色
+    uint8_t b = (rgba >> 8) & 0xFF;   // 蓝色
+    uint8_t a = rgba & 0xFF;          // Alpha
+    
+    // 重新排列为 ABGR: A|B|G|R
+    return ((uint32_t)a << 24) | ((uint32_t)b << 16) | 
+           ((uint32_t)g << 8) | (uint32_t)r;
+}
+
+uint32_t _bk_getBatteryColor(int batteryLevel) {
+    // 确保电量值在有效范围内
+    if (batteryLevel < 1) batteryLevel = 1;
+    if (batteryLevel > 100) batteryLevel = 100;
+    
+    // 将电量转换为0.0-1.0的百分比
+    float percentage = batteryLevel / 100.0f;
+    
+    uint8_t r, g, b, a;
+    a = 0xFF;  // 完全不透明
+    
+    if (percentage <= 0.2f) {
+        // 0-20%: 深红 -> 亮红
+        float factor = percentage / 0.2f;  // 0.0-1.0
+        r = 128 + (uint8_t)(127 * factor);  // 128-255
+        g = 0;
+        b = 0;
+    }
+    else if (percentage <= 0.4f) {
+        // 20-40%: 红 -> 橙
+        float factor = (percentage - 0.2f) / 0.2f;  // 0.0-1.0
+        r = 255;
+        g = (uint8_t)(128 * factor);  // 0-128
+        b = 0;
+    }
+    else if (percentage <= 0.6f) {
+        // 40-60%: 橙 -> 黄
+        float factor = (percentage - 0.4f) / 0.2f;  // 0.0-1.0
+        r = 255;
+        g = 128 + (uint8_t)(127 * factor);  // 128-255
+        b = 0;
+    }
+    else if (percentage <= 0.8f) {
+        // 60-80%: 黄 -> 黄绿
+        float factor = (percentage - 0.6f) / 0.2f;  // 0.0-1.0
+        r = 255 - (uint8_t)(127 * factor);  // 255-128
+        g = 255;
+        b = 0;
+    }
+    else {
+        // 80-100%: 黄绿 -> 绿
+        float factor = (percentage - 0.8f) / 0.2f;  // 0.0-1.0
+        r = 128 - (uint8_t)(128 * factor);  // 128-0
+        g = 255;
+        b = 0;
+    }
+    
+    // 组合为RGBA格式
+    return ((uint32_t)r << 24) | ((uint32_t)g << 16) | ((uint32_t)b << 8) | a;
+}
 
 bool _bk_mask_Extensions(const char* name) {
 		char ext[PATH_MAX] = {};

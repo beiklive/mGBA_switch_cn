@@ -325,6 +325,8 @@ void mGUIInit(struct mGUIRunner* runner, const char* port) {
 	mCoreConfigInit(&runner->config, runner->port);
 	// TODO: Do we need to load more defaults?
 	// BKMARK 设置项默认值
+	mCoreConfigSetDefaultIntValue(&runner->config, BK_META_TEXT_COLOR_TYPE, BK_CONFIG_COLOR_BLACK);
+	mCoreConfigSetDefaultIntValue(&runner->config, BK_META_HOVER_TEXT_COLOR_TYPE, BK_CONFIG_COLOR_BLUE);
 	mCoreConfigSetDefaultIntValue(&runner->config, BK_META_ISFOLDER, true);
 	mCoreConfigSetDefaultIntValue(&runner->config, BK_META_MASK_ENABLE, false);
 	mCoreConfigSetDefaultIntValue(&runner->config, BK_META_PATH_BACKGROUND_ENABLE, false);
@@ -439,7 +441,7 @@ static void _updateLoading(size_t read, size_t size, void* context) {
 	}
 	int themeType = BK_THEME_DEFAULT;
 	BK_GLOBAL_INT_GET(BK_META_CONFIG_THEME, themeType);
-	GUIFontPrintf(runner->params.font, runner->params.width / 2, (GUIFontHeight(runner->params.font) + runner->params.height) / 2, GUI_ALIGN_HCENTER, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_BLACK, "加载中...%i%%", 100 * read / size);
+	GUIFontPrintf(runner->params.font, runner->params.width / 2, (GUIFontHeight(runner->params.font) + runner->params.height) / 2, GUI_ALIGN_HCENTER, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_TEXT, "加载中...%i%%", 100 * read / size);
 	if (runner->params.guiFinish) {
 		runner->params.guiFinish();
 	}
@@ -513,7 +515,10 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 	if (runner->params.guiPrepare) {
 		runner->params.guiPrepare();
 	}
-	GUIFontPrint(runner->params.font, runner->params.width / 2, (GUIFontHeight(runner->params.font) + runner->params.height) / 2, GUI_ALIGN_HCENTER, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_BLACK, "加载中...");
+	if(bk_global_runner->drawBKImage){
+			bk_global_runner->drawBKImage(bk_global_runner, NULL);
+	}
+	GUIFontPrint(runner->params.font, runner->params.width / 2, (GUIFontHeight(runner->params.font) + runner->params.height) / 2, GUI_ALIGN_HCENTER, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_TEXT, "加载中...");
 	if (runner->params.guiFinish) {
 		runner->params.guiFinish();
 	}

@@ -327,7 +327,7 @@ void mGUIBackgroundSet(struct mGUIRunner* runner)
 {
     char background_name[PATH_MAX] = {0};
     struct GUIMenu menu = {
-		.title = "菜单背景图片设置",
+		.title = "主题设置",
         .background = &runner->background.d,
 		.index = 0
 	};
@@ -358,6 +358,40 @@ void mGUIBackgroundSet(struct mGUIRunner* runner)
             .title = "选择背景图片",
             .data = GUI_V_S(BK_META_PATH_BACKGROUND),
             .leftText = display_bg,
+        };
+        *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+            .title = "文字颜色",
+            .data = GUI_V_S(BK_META_TEXT_COLOR_TYPE),
+            .submenu = 0,
+            .state = 0,
+            .validStates = (const char*[]) {
+                "黑色",
+                "白色",
+                "红色",
+                "绿色",
+                "蓝色",
+                "橙色",
+                "黄色",
+                "灰色"
+            },
+            .nStates = BK_CONFIG_COLOR_MAX
+        };
+        *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+            .title = "文字选中色",
+            .data = GUI_V_S(BK_META_HOVER_TEXT_COLOR_TYPE),
+            .submenu = 0,
+            .state = 0,
+            .validStates = (const char*[]) {
+                "黑色",
+                "白色",
+                "红色",
+                "绿色",
+                "蓝色",
+                "橙色",
+                "黄色",
+                "灰色"
+            },
+            .nStates = BK_CONFIG_COLOR_MAX
         };
         *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
             .title = "保存设置",
@@ -468,10 +502,8 @@ void mGUIBackgroundSet(struct mGUIRunner* runner)
             }
             int isBgEnabled = 0;
             BK_GLOBAL_INT_GET(BK_META_PATH_BACKGROUND_ENABLE, isBgEnabled);
-            printf("isBgEnabled:%d\n", isBgEnabled);
 
 			if (background_name[0]) {
-                printf("background_name:%s\n", background_name);
 				mCoreConfigSetValue(&runner->config, BK_META_PATH_BACKGROUND, background_name);
                 if(isBgEnabled)
                 {
@@ -491,6 +523,16 @@ void mGUIBackgroundSet(struct mGUIRunner* runner)
             // 保存数据变量  mCoreConfigSetIntValue
             mCoreConfigSave(&runner->config);
 			mCoreLoadForeignConfig(runner->core, &runner->config);
+
+
+            int colorType = 0;
+            BK_GLOBAL_INT_GET(BK_META_TEXT_COLOR_TYPE, colorType);
+            BK_COLOR_TEXT_SET(colorType);
+            int hoverColorType = 0;
+            BK_GLOBAL_INT_GET(BK_META_HOVER_TEXT_COLOR_TYPE, hoverColorType);
+            BK_COLOR_TEXT_SELECT_SET(hoverColorType);
+
+
             // 清除缓冲区，使用新配置的值
             memset(background_name, 0, PATH_MAX);
             GUIShowMessageBox(&runner->params, GUI_MESSAGE_BOX_OK, 240, "保存完成!");
@@ -537,12 +579,12 @@ void mGUIShowBeiklive(struct mGUIRunner* runner) {
 		.nStates = 2
 	};
     *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+        .title = "主题设置(仅在自定义风格下有效)",
+        .data = GUI_V_U(BK_CONFIG_BACKGROUND),
+    };
+    *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
 		.title = "遮罩设置",
 		.data = GUI_V_U(BK_CONFIG_MASK),
-	};
-    *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "菜单背景图片设置(仅在自定义风格下有效)",
-		.data = GUI_V_U(BK_CONFIG_BACKGROUND),
 	};
     *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
 		.title = "保存设置",
