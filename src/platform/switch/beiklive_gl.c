@@ -122,6 +122,11 @@ const char* const _fragmentShader =
 
 void bk_opengl_deinit(void) { 
     glDeleteTextures(1, &bkTex);
+    glDeleteTextures(1, &bkMaskTexGBA);
+    glDeleteTextures(1, &bkMaskTexGBC);
+    glDeleteProgram(bkProgram);
+
+
 }
 
 void _bk_util_draw_menu_background(struct GUIBackground* background, void* title)
