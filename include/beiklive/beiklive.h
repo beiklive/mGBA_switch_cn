@@ -246,4 +246,15 @@ int bk_init_menu_background(const char* filepath);
 
 
 
+extern GLuint bkfbo; 
+extern GLuint bkfboVao; 
+extern GLuint bkfboVbo; 
+extern GLuint bkfboTex; 
+
+extern GLuint bkShaderProgram;
+void bk_init_fbo(void);
+void bk_switch_to_fbo(bool enable);
+void bk_render_fbo(GLuint* texture, GLuint *vao);
+
+
 #endif

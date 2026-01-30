@@ -484,9 +484,7 @@ static void _drawTex(
 	bool faded,                  // 是否启用淡化效果
 	bool blendTop                // 是否与上层画面混合
 ) {
-	// 设置 OpenGL 视口
-	// (x=0, y=1080-vheight) 表示从屏幕顶部向下绘制
-	glViewport(0, 1080 - vheight, vwidth, vheight);
+
 
 	// 启用 alpha 混合
 	glEnable(GL_BLEND);
@@ -632,13 +630,7 @@ static void _drawTex(
 	// 关闭混合
 	glDisable(GL_BLEND);
 
-	// 恢复 GUI 原始视口大小
-	glViewport(
-		0,
-		1080 - runner->params.height,
-		runner->params.width,
-		runner->params.height
-	);
+
 }
 
 
@@ -844,6 +836,10 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 		glBindTexture(GL_TEXTURE_2D, tex);
 	}
 
+	bk_switch_to_fbo(true);
+	// 设置 OpenGL 视口
+	// (x=0, y=1080-vheight) 表示从屏幕顶部向下绘制
+	glViewport(0, 0, 256, 256);
 	// 如果启用帧间混合，先绘制淡化的前一帧，再绘制当前帧
 	if (interframeBlending) {
 		glBindTexture(GL_TEXTURE_2D, oldTex);
@@ -854,6 +850,19 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 		_drawTex(runner, width, height, faded, false);
 	}
 
+
+
+
+	bk_switch_to_fbo(false);
+	glViewport(0, 1080 - vheight, vwidth, vheight);
+	bk_render_fbo(&bkfboTex, &vao);
+	// 恢复 GUI 原始视口大小
+	glViewport(
+		0,
+		1080 - runner->params.height,
+		runner->params.width,
+		runner->params.height
+	);
 	// 处理振动反馈
 	HidVibrationValue values[4];
 	if (rumble.up) {
@@ -1128,6 +1137,8 @@ static void glInit(void) {
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, copyFbo);
 	glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+
+	bk_init_fbo();
 
 	// 编译着色器程序
 	program = glCreateProgram();

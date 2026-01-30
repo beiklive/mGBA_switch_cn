@@ -11,6 +11,21 @@ GLuint bkcolorLocation;       // 颜色uniform位置
 GLuint bkvbo;                 // 顶点缓冲对象
 GLuint bkvao;                 // 顶点数组对象
 
+GLuint bkfbo; 
+GLuint bkfboVao; 
+GLuint bkfboVbo; 
+GLuint bkfboTex;
+GLuint bkShaderProgram;
+
+static const GLfloat bkQuadVerts[] = {
+    // x, y,      u, v
+    -1.f, -1.f,  0.f, 0.f,
+     1.f, -1.f,  1.f, 0.f,
+     1.f,  1.f,  1.f, 1.f,
+    -1.f,  1.f,  0.f, 1.f,
+};
+
+
 // 定义四边形顶点的偏移坐标（0-1范围）
 static const GLfloat _offsets[] = {
 	0.f, 0.f,  // 左下角
@@ -194,4 +209,144 @@ void bk_init_mask_texture(const char* filepath, int maskType){
     }
     free(maskpath);
     BK_GLOBAL_INT_SET(maskType == 0 ? BK_META_MASK_STATUS_GBA : BK_META_MASK_STATUS_GBC, success);
+}
+
+
+void bk_init_fbo(void)
+{
+static const GLchar* const _gles2Header =
+	"#version 100\n"
+	"precision mediump float;\n";
+
+
+// 顶点着色器：传递纹理坐标
+static const char* const _vertexShader =
+    "attribute vec4 position;\n"
+    "attribute vec2 texcoord;\n"
+    "varying vec2 texCoord;\n"
+    
+    "void main() {\n"
+    "   gl_Position = position;\n"
+    "   texCoord = texcoord;\n"
+    "}";
+
+static const char* const _fragmentShaderSimple =
+    "varying vec2 texCoord;\n"     // 接收顶点纹理坐标
+    "uniform sampler2D tex;\n"
+    "uniform vec4 color;\n"
+
+    "void main() {\n"
+    // 从纹理采样
+    "   vec4 texColor = vec4(texture2D(tex, texCoord).rgb, 1.0);\n"
+    
+    // 应用颜色调制
+    "   texColor *= color;\n"
+    
+    // 转换为灰度（简单平均值）
+    "   float gray = (texColor.r + texColor.g + texColor.b) / 3.0;\n"
+    
+    // 输出灰度颜色
+    "   gl_FragColor = vec4(vec3(gray), texColor.a);\n"
+    "}";
+
+    bkShaderProgram = glCreateProgram();
+
+    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+
+    const GLchar* shaderBuffer[2];
+    shaderBuffer[0] = _gles2Header;
+    shaderBuffer[1] = _vertexShader;
+
+    glShaderSource(vertexShader, 2, shaderBuffer, NULL);
+    glCompileShader(vertexShader);
+
+    shaderBuffer[1] = _fragmentShaderSimple;
+    glShaderSource(fragmentShader, 2, shaderBuffer, NULL);
+    glCompileShader(fragmentShader);
+
+    glAttachShader(bkShaderProgram, vertexShader);
+    glAttachShader(bkShaderProgram, fragmentShader);
+    glLinkProgram(bkShaderProgram);
+
+
+    glGenVertexArrays(1, &bkfboVao);
+    glGenBuffers(1, &bkfboVbo);
+
+    glBindVertexArray(bkfboVao);
+    glBindBuffer(GL_ARRAY_BUFFER, bkfboVbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(bkQuadVerts), bkQuadVerts, GL_STATIC_DRAW);
+    GLint posLoc = glGetAttribLocation(bkShaderProgram, "position");
+    GLint uvLoc  = glGetAttribLocation(bkShaderProgram, "texcoord");
+    glEnableVertexAttribArray(posLoc);
+    glVertexAttribPointer(posLoc, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)0);
+
+    glEnableVertexAttribArray(uvLoc);
+    glVertexAttribPointer(uvLoc, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)(2 * sizeof(GLfloat)));
+
+    glBindVertexArray(0);
+
+
+
+    glGenFramebuffers(1, &bkfbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, bkfbo);
+    glGenTextures(1, &bkfboTex);
+    glBindTexture(GL_TEXTURE_2D, bkfboTex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, 256, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glFramebufferTexture2D(
+        GL_FRAMEBUFFER,
+        GL_COLOR_ATTACHMENT0,
+        GL_TEXTURE_2D,
+        bkfboTex,
+        0
+    );
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (status != GL_FRAMEBUFFER_COMPLETE) {
+        printf("FBO incomplete: 0x%x\n", status);
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+}
+void bk_switch_to_fbo(bool enable)
+{
+    if(enable)
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, bkfbo);
+        glClearColor(0,0,0,1);
+        glClear(GL_COLOR_BUFFER_BIT);
+    }
+    else
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+}
+
+void bk_render_fbo(GLuint *texture, GLuint *vao)
+{
+    glUseProgram(bkShaderProgram);
+    glBindVertexArray(bkfboVao);
+
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, *texture);
+
+    glUniform1i(glGetUniformLocation(bkShaderProgram, "tex"), 0);
+
+    // 设置颜色调制（通常设为白色不改变颜色）
+    glUniform4f(glGetUniformLocation(bkShaderProgram, "color"), 1.0f, 1.0f, 1.0f, 1.0f);
+
+    	// 使用三角扇绘制一个矩形（四个顶点）
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+// 解绑顶点数组
+	glBindVertexArray(0);
+    glUseProgram(0);
+
+
 }
