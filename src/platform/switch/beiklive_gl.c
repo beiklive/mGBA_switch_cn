@@ -211,7 +211,6 @@ void bk_init_mask_texture(const char* filepath, int maskType){
     BK_GLOBAL_INT_SET(maskType == 0 ? BK_META_MASK_STATUS_GBA : BK_META_MASK_STATUS_GBC, success);
 }
 
-
 void bk_init_fbo(void)
 {
 static const GLchar* const _gles2Header =
@@ -230,23 +229,69 @@ static const char* const _vertexShader =
     "   texCoord = texcoord;\n"
     "}";
 
-static const char* const _fragmentShaderSimple =
-    "varying vec2 texCoord;\n"     // 接收顶点纹理坐标
+static const char* const _fragmentShaderCRT =
+    "varying vec2 texCoord;\n"
     "uniform sampler2D tex;\n"
     "uniform vec4 color;\n"
-
+    "uniform vec2 screenSize;\n"
+    
     "void main() {\n"
-    // 从纹理采样
-    "   vec4 texColor = vec4(texture2D(tex, texCoord).rgb, 1.0);\n"
+    // 更强烈的CRT弯曲效果
+    "   vec2 uv = texCoord * 2.0 - 1.0;\n"
+    "   float d = length(uv);\n"
+    "   vec2 distorted = uv * (1.0 + 0.15 * d * d * d);\n"  // 立方弯曲更明显
+    "   distorted = (distorted + 1.0) * 0.5;\n"
     
-    // 应用颜色调制
-    "   texColor *= color;\n"
+    // 边缘遮罩（vignette效果）
+    "   float vignette = 1.0 - 0.3 * length(uv);\n"
     
-    // 转换为灰度（简单平均值）
-    "   float gray = (texColor.r + texColor.g + texColor.b) / 3.0;\n"
+    // 检查是否超出屏幕范围
+    "   if (distorted.x < 0.0 || distorted.x > 1.0 || distorted.y < 0.0 || distorted.y > 1.0) {\n"
+    "       gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);\n"
+    "       return;\n"
+    "   }\n"
     
-    // 输出灰度颜色
-    "   gl_FragColor = vec4(vec3(gray), texColor.a);\n"
+    // 采样纹理
+    "   vec4 texColor = texture2D(tex, distorted);\n"
+    
+    // 模拟CRT扫描线（水平线）
+    "   float scanline = sin(distorted.y * screenSize.y * 3.14159 * 2.0);\n"
+    "   scanline = 0.95 + 0.05 * scanline * scanline;\n"  // 更柔和的扫描线
+    
+    // 垂直遮罩线（模拟CRT栅格）
+    "   float verticalMask = sin(distorted.x * screenSize.x * 3.14159 * 0.5);\n"
+    "   verticalMask = 0.97 + 0.03 * verticalMask * verticalMask;\n"
+    
+    // 模拟CRT色差/辉光
+    "   float chromaOffset = 0.003;\n"  // 稍微减小色差
+    "   vec3 chroma;\n"
+    "   chroma.r = texture2D(tex, distorted + vec2(chromaOffset, 0.0)).r;\n"
+    "   chroma.g = texture2D(tex, distorted).g;\n"
+    "   chroma.b = texture2D(tex, distorted - vec2(chromaOffset, 0.0)).b;\n"
+    
+    // 模拟CRT聚焦模糊
+    "   float blurOffset = 0.001;\n"
+    "   vec3 blurColor = (chroma +\n"
+    "       texture2D(tex, distorted + vec2(blurOffset, 0.0)).rgb +\n"
+    "       texture2D(tex, distorted - vec2(blurOffset, 0.0)).rgb +\n"
+    "       texture2D(tex, distorted + vec2(0.0, blurOffset)).rgb +\n"
+    "       texture2D(tex, distorted - vec2(0.0, blurOffset)).rgb) / 5.0;\n"
+    
+    // 组合效果
+    "   vec3 finalColor = blurColor * scanline * verticalMask * vignette;\n"
+    
+    // 应用基础颜色调制
+    "   finalColor *= color.rgb;\n"
+    
+    // 模拟CRT伽马曲线和饱和度
+    "   finalColor = pow(finalColor, vec3(1.2));\n"  // 更强的伽马
+    "   float luminance = dot(finalColor, vec3(0.299, 0.587, 0.114));\n"
+    "   finalColor = mix(vec3(luminance), finalColor, 1.1);\n"  // 轻微提升饱和度
+    
+    // 轻微提升对比度
+    "   finalColor = (finalColor - 0.5) * 1.1 + 0.5;\n"
+    
+    "   gl_FragColor = vec4(finalColor, texColor.a * color.a);\n"
     "}";
 
     bkShaderProgram = glCreateProgram();
@@ -261,7 +306,7 @@ static const char* const _fragmentShaderSimple =
     glShaderSource(vertexShader, 2, shaderBuffer, NULL);
     glCompileShader(vertexShader);
 
-    shaderBuffer[1] = _fragmentShaderSimple;
+    shaderBuffer[1] = _fragmentShaderCRT;  // 改为CRT着色器
     glShaderSource(fragmentShader, 2, shaderBuffer, NULL);
     glCompileShader(fragmentShader);
 
@@ -293,8 +338,8 @@ static const char* const _fragmentShaderSimple =
     glGenTextures(1, &bkfboTex);
     glBindTexture(GL_TEXTURE_2D, bkfboTex);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, 256, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
@@ -333,20 +378,21 @@ void bk_render_fbo(GLuint *texture, GLuint *vao)
     glUseProgram(bkShaderProgram);
     glBindVertexArray(bkfboVao);
 
-
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, *texture);
 
     glUniform1i(glGetUniformLocation(bkShaderProgram, "tex"), 0);
 
-    // 设置颜色调制（通常设为白色不改变颜色）
+    // 设置颜色调制
     glUniform4f(glGetUniformLocation(bkShaderProgram, "color"), 1.0f, 1.0f, 1.0f, 1.0f);
+    
+    // 添加屏幕尺寸uniform（假设屏幕为256x256，根据实际情况调整）
+    glUniform2f(glGetUniformLocation(bkShaderProgram, "screenSize"), 256.0f, 256.0f);
 
-    	// 使用三角扇绘制一个矩形（四个顶点）
-	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-// 解绑顶点数组
-	glBindVertexArray(0);
+    // 使用三角扇绘制一个矩形（四个顶点）
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+    
+    // 解绑顶点数组
+    glBindVertexArray(0);
     glUseProgram(0);
-
-
 }
