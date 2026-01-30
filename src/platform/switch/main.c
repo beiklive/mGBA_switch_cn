@@ -837,8 +837,6 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 	}
 
 	bk_switch_to_fbo(true);
-	// 设置 OpenGL 视口
-	// (x=0, y=1080-vheight) 表示从屏幕顶部向下绘制
 	glViewport(0, 0, 256, 256);
 	// 如果启用帧间混合，先绘制淡化的前一帧，再绘制当前帧
 	if (interframeBlending) {
@@ -855,8 +853,7 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 
 	bk_switch_to_fbo(false);
 	glViewport(0, 1080 - vheight, vwidth, vheight);
-	bk_render_fbo(&bkfboTex, &vao);
-	// 恢复 GUI 原始视口大小
+	bk_render_fbo(&bkfboTex, width, height);
 	glViewport(
 		0,
 		1080 - runner->params.height,

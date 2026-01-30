@@ -24,11 +24,92 @@ enum BKGUIAction{
     BK_CONFIG_STATUS_4,
 	BK_CONFIG_MAPNAME,
     BK_CONFIG_MASK,
+    BK_CONFIG_SHADER,
     BK_CONFIG_BACKGROUND,
-	BK_CONFIG_SAVE
+	BK_CONFIG_SAVE,
+	BK_CONFIG_SAVE2
 };
 
+void mGUIShaderSet(struct mGUIRunner* runner)
+{
+    struct GUIMenu menu = {
+		.title = "滤镜设置",
+        .background = &runner->background.d,
+		.index = 0
+	};
+    GUIMenuItemListInit(&menu.items, 0);
+    *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+        .title = "返回",
+        .data = GUI_V_V,
+    };
+    *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+        .title = "保存为当前游戏滤镜",
+        .data = GUI_V_U(BK_CONFIG_SAVE),
+    };
 
+    int platform = runner->core->platform(runner->core);
+    if (platform == 0) {
+        *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+            .title = "保存为全局GBA游戏滤镜",
+            .data = GUI_V_U(BK_CONFIG_SAVE2),
+        };
+    }else{
+        *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+            .title = "保存为全局GB/GBC游戏滤镜",
+            .data = GUI_V_U(BK_CONFIG_SAVE2),
+        };
+    }
+    *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+			.title = "[滤镜列表]",
+			.readonly = true,
+    };
+
+
+
+    // // 创建菜单项
+    // *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+    //     .title = "数据测试",
+    //     .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(1)),  // 使用字符串变体宏
+    //     .submenu = NULL,
+    //     .state = 0,
+    //     .validStates = validStates,
+    //     .stateMappings = validVariants,
+    //     .nStates = count,
+    //     .readonly = false
+    // };
+
+
+
+    while(true)
+    {
+        // BKTODO 循环列表显示滤镜
+
+
+
+
+        struct GUIMenuItem* item;
+		enum GUIMenuExitReason reason = GUIShowMenu(&runner->params, &menu, &item);
+
+        if (reason != GUI_MENU_EXIT_ACCEPT || GUIVariantIsVoid(item->data)) {
+            GUIMenuItemListClear(&menu.items);
+			break;
+		}
+        enum BKGUIAction action = (enum BKGUIAction) item->data.v.u;
+        if(action == BK_CONFIG_SAVE)
+        {
+
+        }
+        else if(action == BK_CONFIG_SAVE2)
+        {
+
+        }
+
+        GUIMenuItemListClear(&menu.items);
+    }
+
+    GUIMenuItemListDeinit(&menu.items);
+
+}
 
 
 // 名称映射相关功能
@@ -587,6 +668,10 @@ void mGUIShowBeiklive(struct mGUIRunner* runner) {
 		.data = GUI_V_U(BK_CONFIG_MASK),
 	};
     *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+		.title = "滤镜设置",
+		.data = GUI_V_U(BK_CONFIG_SHADER),
+	};
+    *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
 		.title = "保存设置",
 		.data = GUI_V_U(BK_CONFIG_SAVE),
 	};
@@ -680,6 +765,9 @@ void mGUIShowBeiklive(struct mGUIRunner* runner) {
             break;
         case BK_CONFIG_BACKGROUND:
             mGUIBackgroundSet(runner);
+            break;
+        case BK_CONFIG_SHADER:
+            mGUIShaderSet(runner);
             break;
         case BK_CONFIG_SAVE:
             for (int i = 0; i < GUIMenuItemListSize(&menu.items); ++i) {

@@ -244,17 +244,41 @@ void bk_opengl_deinit(void);
 void bk_init_mask_texture(const char* filepath, int maskType);
 int bk_init_menu_background(const char* filepath);
 
+typedef enum {
+    UNIFORM_FLOAT,
+    UNIFORM_INT,
+    UNIFORM_VEC2,
+    UNIFORM_VEC3,
+    UNIFORM_VEC4,
+    UNIFORM_MAT3,
+    UNIFORM_MAT4,
+    UNIFORM_SAMPLER2D
+} UniformType;
+
+
+typedef struct {
+    GLuint texture;   // 纹理
+    GLuint fbo;       // 绘制到fbo的纹理
+    GLuint program;   // 着色器程序
+    int width;              // FBO宽度
+    int height;             // FBO高度
+    bool is_enable;          // 当前是否绑定
+} bk_FrameBufferObject_t;
+
+
+
 
 
 extern GLuint bkfbo; 
+extern GLuint bkfboTex; 
+
 extern GLuint bkfboVao; 
 extern GLuint bkfboVbo; 
-extern GLuint bkfboTex; 
 
 extern GLuint bkShaderProgram;
 void bk_init_fbo(void);
 void bk_switch_to_fbo(bool enable);
-void bk_render_fbo(GLuint* texture, GLuint *vao);
+void bk_render_fbo(GLuint* texture, int width, int height);
 
 
 #endif
