@@ -518,77 +518,84 @@ static void _drawTex(
 		inheight = GB_VIDEO_VERTICAL_PIXELS;
 	}
 	
-	// 计算输入纹理与视口的宽高比例
-	float aspectX = inwidth / vwidth;
-	float aspectY = inheight / vheight;
-
-	// 最大缩放因子，默认 1（不缩放）
-	float max = 1.f;
 	
-	// 根据屏幕显示模式计算缩放方式
-	switch (screenMode) {
-
-	case SM_PA:
-		// 像素精确模式（Pixel Accurate）
-		// 选择整数倍缩放，避免像素失真
-		if (aspectX > aspectY) {
-			max = floor(1.f / aspectX);
-		} else {
-			max = floor(1.f / aspectY);
-		}
-
-		// 如果可用缩放倍数 >= 1，直接使用
-		if (max >= 1.f) {
-			break;
-		}
-		// 否则继续执行下一个模式
-		// Fall through
-
-	case SM_AF:
-		// 宽高比适应模式（Aspect Fit）
-		// 保持宽高比，画面完整显示
-		if (aspectX > aspectY) {
-			max = 1.f / aspectX;
-		} else {
-			max = 1.f / aspectY;
-		}
-		break;
-
-	case SM_SF:
-		// 拉伸填满模式（Stretch Fill）
-		// 不保持宽高比，完全填充屏幕
-		aspectX = 1.f;
-		aspectY = 1.f;
-		break;
-	}
-
-	// 如果不是拉伸填满模式
-	if (screenMode != SM_SF) {
-
-		// 重新基于实际纹理尺寸计算宽高比例
-		aspectX = width / (float) vwidth;
-		aspectY = height / (float) vheight;
-	}
-
-	if (SM_PA == screenMode)
-	{
-		if(runner->core->platform(runner->core) == mPLATFORM_GB)
-		{
-			// GB/GBC 的像素精确模式 适配部分滤镜
-			aspectX = 1120.0f/1920.0f;
-			aspectY = 1008.0f/1080.0f;
-			max = 1.0f;
-		}
-	}
-	// 应用最终缩放因子
-	aspectX *= max;
-	aspectY *= max;
-
 	// 设置纹理采样单元（使用 0 号纹理）
 	glUniform1i(texLocation, 0);
-
+	
 	// 设置输出尺寸比例（用于顶点或片段着色器） 绘制区域大小（缩放和居中）
-	glUniform2f(dimsLocation, aspectX, aspectY);
+	if(useFBO)
+	{
+		glUniform2f(dimsLocation, 1.0f, 1.0f);
+	}
+	else
+	{
+		// 计算输入纹理与视口的宽高比例
+		float aspectX = inwidth / vwidth;
+		float aspectY = inheight / vheight;
+	
+		// 最大缩放因子，默认 1（不缩放）
+		float max = 1.f;
+		
+		// 根据屏幕显示模式计算缩放方式
+		switch (screenMode) {
+	
+		case SM_PA:
+			// 像素精确模式（Pixel Accurate）
+			// 选择整数倍缩放，避免像素失真
+			if (aspectX > aspectY) {
+				max = floor(1.f / aspectX);
+			} else {
+				max = floor(1.f / aspectY);
+			}
+	
+			// 如果可用缩放倍数 >= 1，直接使用
+			if (max >= 1.f) {
+				break;
+			}
+			// 否则继续执行下一个模式
+			// Fall through
+	
+		case SM_AF:
+			// 宽高比适应模式（Aspect Fit）
+			// 保持宽高比，画面完整显示
+			if (aspectX > aspectY) {
+				max = 1.f / aspectX;
+			} else {
+				max = 1.f / aspectY;
+			}
+			break;
+	
+		case SM_SF:
+			// 拉伸填满模式（Stretch Fill）
+			// 不保持宽高比，完全填充屏幕
+			aspectX = 1.f;
+			aspectY = 1.f;
+			break;
+		}
+	
+		// 如果不是拉伸填满模式
+		if (screenMode != SM_SF) {
+	
+			// 重新基于实际纹理尺寸计算宽高比例
+			aspectX = width / (float) vwidth;
+			aspectY = height / (float) vheight;
+		}
+	
+		if (SM_PA == screenMode)
+		{
+			if(runner->core->platform(runner->core) == mPLATFORM_GB)
+			{
+				// GB/GBC 的像素精确模式 适配部分滤镜
+				aspectX = 1120.0f/1920.0f;
+				aspectY = 1008.0f/1080.0f;
+				max = 1.0f;
+			}
+		}
+		// 应用最终缩放因子
+		aspectX *= max;
+		aspectY *= max;
+		glUniform2f(dimsLocation, aspectX, aspectY);
+	}
 
 	// 如果使用 PBO（Pixel Buffer Object）
 	if (usePbo) {
@@ -822,7 +829,6 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 	// 获取期望的视频尺寸
 	unsigned width, height;
 	runner->core->desiredVideoDimensions(runner->core, &width, &height);
-
 	glActiveTexture(GL_TEXTURE0);
 	if (usePbo) {
 		// 上传像素缓冲数据到纹理
@@ -835,25 +841,88 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 	} else if (!interframeBlending) {
 		glBindTexture(GL_TEXTURE_2D, tex);
 	}
-
-	bk_switch_to_fbo(true);
-	glViewport(0, 0, 256, 256);
-	// 如果启用帧间混合，先绘制淡化的前一帧，再绘制当前帧
-	if (interframeBlending) {
-		glBindTexture(GL_TEXTURE_2D, oldTex);
-		_drawTex(runner, width, height, faded, false);
-		glBindTexture(GL_TEXTURE_2D, tex);
-		_drawTex(runner, width, height, faded, true);
-	} else {
-		_drawTex(runner, width, height, faded, false);
+	if(!useFBO)
+	{
+		glViewport(0, 1080 - vheight, vwidth, vheight);
+		// 如果启用帧间混合，先绘制淡化的前一帧，再绘制当前帧
+		if (interframeBlending) {
+			glBindTexture(GL_TEXTURE_2D, oldTex);
+			_drawTex(runner, width, height, faded, false);
+			glBindTexture(GL_TEXTURE_2D, tex);
+			_drawTex(runner, width, height, faded, true);
+		} else {
+			_drawTex(runner, width, height, faded, false);
+		}
 	}
+	else
+	{
+		bk_switch_to_fbo(true);
+		glViewport(0, 0, width, height);
+		// 如果启用帧间混合，先绘制淡化的前一帧，再绘制当前帧
+		if (interframeBlending) {
+			glBindTexture(GL_TEXTURE_2D, oldTex);
+			_drawTex(runner, width, height, faded, false);
+			glBindTexture(GL_TEXTURE_2D, tex);
+			_drawTex(runner, width, height, faded, true);
+		} else {
+			_drawTex(runner, width, height, faded, false);
+		}
+	
+		bk_switch_to_fbo(false);
+
+		float aspectX = width / (float) vwidth;
+		float aspectY = height / (float) vheight;
+		float max = 1.f;
+		switch (screenMode) {
+		case SM_PA:
+			if (aspectX > aspectY) {
+				max = floor(1.f / (float) aspectX);
+			} else {
+				max = floor(1.f / (float) aspectY);
+			}
+			if (max >= 1.f) {
+				break;
+			}
+		case SM_AF:
+			if (aspectX > aspectY) {
+				max = 1.f / (float) aspectX;
+			} else {
+				max = 1.f / (float) aspectY;
+			}
+			break;
+		case SM_SF:
+			aspectX = 1.f;
+			aspectY = 1.f;
+			break;
+		}
+		if (screenMode != SM_SF) {
+			aspectX = width / (float) vwidth;
+			aspectY = height / (float) vheight;
+		}
+
+		if (SM_PA == screenMode)
+		{
+			if(runner->core->platform(runner->core) == mPLATFORM_GB)
+			{
+				aspectX = 1120.0f/1920.0f;
+				aspectY = 1008.0f/1080.0f;
+				max = 1.0f;
+			}
+		}
+		aspectX *= max;
+		aspectY *= max;
+		printf("vwidth:%d vheight:%d width:%d height:%d aspectX:%f aspectY:%f max:%f\n", vwidth, vheight, width, height, aspectX, aspectY, max);
+		unsigned renderWidth = (unsigned) (aspectX * vwidth);
+		unsigned renderHeight = (unsigned) (aspectY * vheight);
+		unsigned renderX = (vwidth - renderWidth) / 2;
+		unsigned renderY = (vheight - renderHeight) / 2;
+		printf("renderX:%d renderY:%d renderWidth:%d renderHeight:%d\n", renderX, renderY, renderWidth, renderHeight);
+		glViewport(renderX, 1080 - vheight + renderY, renderWidth, renderHeight);
 
 
 
-
-	bk_switch_to_fbo(false);
-	glViewport(0, 1080 - vheight, vwidth, vheight);
-	bk_render_fbo(&bkfboTex, width, height);
+		bk_render_fbo(&bkfboTex, width, height);
+	}
 	glViewport(
 		0,
 		1080 - runner->params.height,
@@ -1135,7 +1204,6 @@ static void glInit(void) {
 	glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 
-	bk_init_fbo();
 
 	// 编译着色器程序
 	program = glCreateProgram();

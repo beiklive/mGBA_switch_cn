@@ -267,7 +267,10 @@ typedef struct {
 
 
 
-
+#define BK_GBA_WIDTH 240
+#define BK_GBA_HEIGHT 160
+#define BK_GBC_WIDTH 160
+#define BK_GBC_HEIGHT 144
 
 extern GLuint bkfbo; 
 extern GLuint bkfboTex; 
@@ -276,9 +279,12 @@ extern GLuint bkfboVao;
 extern GLuint bkfboVbo; 
 
 extern GLuint bkShaderProgram;
-void bk_init_fbo(void);
+
+extern	bool useFBO;
+
+void bk_init_fbo(int width, int height);
 void bk_switch_to_fbo(bool enable);
 void bk_render_fbo(GLuint* texture, int width, int height);
-
+void bk_deinit_fbo(void);
 
 #endif

@@ -16,6 +16,7 @@ GLuint bkfboVao;
 GLuint bkfboVbo; 
 GLuint bkfboTex;
 GLuint bkShaderProgram;
+bool useFBO = true;
 
 static const GLfloat bkQuadVerts[] = {
     // x, y,      u, v
@@ -211,7 +212,7 @@ void bk_init_mask_texture(const char* filepath, int maskType){
     BK_GLOBAL_INT_SET(maskType == 0 ? BK_META_MASK_STATUS_GBA : BK_META_MASK_STATUS_GBC, success);
 }
 
-void bk_init_fbo(void)
+void bk_init_fbo(int width, int height)
 {
 static const GLchar* const _gles2Header =
 	"#version 100\n"
@@ -244,6 +245,7 @@ static const char* const _fragmentShaderCRT =
     "    }\n"
     "    gl_FragColor = color;\n"
     "}" ;
+
 
 
     bkShaderProgram = glCreateProgram();
@@ -289,7 +291,7 @@ static const char* const _fragmentShaderCRT =
     glBindFramebuffer(GL_FRAMEBUFFER, bkfbo);
     glGenTextures(1, &bkfboTex);
     glBindTexture(GL_TEXTURE_2D, bkfboTex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, 256, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -333,10 +335,15 @@ void bk_render_fbo(GLuint *texture, int width, int height)
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, *texture);
 
+    glTexParameteri(
+		GL_TEXTURE_2D,
+		GL_TEXTURE_MAG_FILTER,
+		GL_NEAREST
+	);
+
     glUniform1i(glGetUniformLocation(bkShaderProgram, "tex"), 0);
 
     
-    // 添加屏幕尺寸uniform（假设屏幕为256x256，根据实际情况调整）
     glUniform2f(glGetUniformLocation(bkShaderProgram, "texSize"), (float)width, (float)height);
     glUniform1f(glGetUniformLocation(bkShaderProgram, "boundBrightness"), 0.9f);
 
@@ -346,4 +353,12 @@ void bk_render_fbo(GLuint *texture, int width, int height)
     // 解绑顶点数组
     glBindVertexArray(0);
     glUseProgram(0);
+}
+
+void bk_deinit_fbo(void){
+    glDeleteProgram(bkShaderProgram);
+    glDeleteFramebuffers(1, &bkfbo);
+    glDeleteTextures(1, &bkfboTex);
+    glDeleteVertexArrays(1, &bkfboVao);
+    glDeleteBuffers(1, &bkfboVbo);
 }

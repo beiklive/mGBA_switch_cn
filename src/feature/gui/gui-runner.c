@@ -615,6 +615,17 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 	MutexUnlock(&runner->autosave.mutex);
 #endif
 
+	if (runner->core->platform(runner->core) == mPLATFORM_GBA)
+	{
+		bk_init_fbo(BK_GBA_WIDTH, BK_GBA_HEIGHT);
+	}
+	else
+	{
+		bk_init_fbo(BK_GBC_WIDTH, BK_GBC_HEIGHT);
+	}
+
+
+
 	if (runner->gameLoaded) {
 		runner->gameLoaded(runner);  // 加载游戏
 	}
@@ -890,6 +901,8 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 	GUIMenuItemListDeinit(&pauseMenu.items);
 	GUIMenuItemListDeinit(&stateSaveMenu.items);
 	GUIMenuItemListDeinit(&stateLoadMenu.items);
+
+	bk_deinit_fbo();
 	mLOG(GUI_RUNNER, INFO, "Game stopped!");
 }
 
@@ -925,6 +938,10 @@ void mGUIRunloop(struct mGUIRunner* runner) {
 		BK_GLOBAL_INT_SET(BK_META_ISFOLDER, false);
 		mCoreConfigSave(&runner->config);
 		
+
+
+
+
 		mGUIRun(runner, path); 
 	}
 }
