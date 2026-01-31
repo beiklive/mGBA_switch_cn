@@ -911,16 +911,11 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 		}
 		aspectX *= max;
 		aspectY *= max;
-		printf("vwidth:%d vheight:%d width:%d height:%d aspectX:%f aspectY:%f max:%f\n", vwidth, vheight, width, height, aspectX, aspectY, max);
 		unsigned renderWidth = (unsigned) (aspectX * vwidth);
 		unsigned renderHeight = (unsigned) (aspectY * vheight);
 		unsigned renderX = (vwidth - renderWidth) / 2;
 		unsigned renderY = (vheight - renderHeight) / 2;
-		printf("renderX:%d renderY:%d renderWidth:%d renderHeight:%d\n", renderX, renderY, renderWidth, renderHeight);
 		glViewport(renderX, 1080 - vheight + renderY, renderWidth, renderHeight);
-
-
-
 		bk_render_fbo(&bkfboTex, width, height);
 	}
 	glViewport(

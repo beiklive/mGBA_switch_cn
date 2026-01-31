@@ -231,20 +231,45 @@ static const char* const _vertexShader =
     "}";
 
 static const char* const _fragmentShaderCRT =
+    "varying vec2 texCoord;\n"
     "uniform sampler2D tex;\n"
     "uniform vec2 texSize;\n"
-    "varying vec2 texCoord;\n"
-    "uniform float boundBrightness;\n"
-    "void main()\n"
-    "{\n"
-    "    vec4 color = texture2D(tex, texCoord);\n"
-    "    if (int(mod(texCoord.s * texSize.x * 3.0, 3.0)) == 0 ||\n"
-    "        int(mod(texCoord.t * texSize.y * 3.0, 3.0)) == 0)\n"
-    "    {\n"
-    "        color.rgb *= vec3(1.0, 1.0, 1.0) * boundBrightness;\n"
-    "    }\n"
-    "    gl_FragColor = color;\n"
-    "}" ;
+    "vec4 scale2x(vec4 pixels[5], vec2 p) {\n"
+    "    p = fract(p);\n"
+    "	if (p.x > .5) {\n"
+    "		if (p.y > .5) {\n"
+    "			return pixels[0] == pixels[3] && pixels[0] != pixels[1] && pixels[3] != pixels[4] ? pixels[3] : pixels[2];\n"
+    "		} else {\n"
+    "			return pixels[4] == pixels[3] && pixels[1] != pixels[4] && pixels[0] != pixels[3] ? pixels[3] : pixels[2];\n"
+    "		}\n"
+    "	} else {\n"
+    "		if (p.y > .5) {\n"
+    "			return pixels[1] == pixels[0] && pixels[0] != pixels[3] && pixels[1] != pixels[4] ? pixels[1] : pixels[2];\n"
+    "		} else {\n"
+    "			return pixels[1] == pixels[4] && pixels[1] != pixels[0] && pixels[4] != pixels[3] ? pixels[1] : pixels[2];\n"
+    "		}\n"
+    "	}\n"
+    "}\n"
+    "vec4 scaleNeighborhood(vec2 p, vec2 x, vec2 o) {\n"
+    "	vec4 neighborhood[5];\n"
+    "    neighborhood[0] = texture2D(tex, texCoord + x + vec2( 0.0,  o.y));\n"
+    "    neighborhood[1] = texture2D(tex, texCoord + x + vec2(-o.x,  0.0));\n"
+    "    neighborhood[2] = texture2D(tex, texCoord + x + vec2( 0.0,  0.0));\n"
+    "    neighborhood[3] = texture2D(tex, texCoord + x + vec2( o.x,  0.0));\n"
+    "    neighborhood[4] = texture2D(tex, texCoord + x + vec2( 0.0, -o.y));\n"
+    "	return scale2x(neighborhood, p + x * texSize);\n"
+    "}\n"
+    "void main() {\n"
+    "    vec2 o = 1.0 / texSize;\n"
+    "    vec2 p = texCoord * texSize;\n"
+    "	vec4 pixels[5];\n"
+    "	pixels[0] = scaleNeighborhood(p, vec2(       0.0,  o.y / 2.0), o);\n"
+    "	pixels[1] = scaleNeighborhood(p, vec2(-o.x / 2.0,        0.0), o);\n"
+    "	pixels[2] = scaleNeighborhood(p, vec2(       0.0,        0.0), o);\n"
+    "	pixels[3] = scaleNeighborhood(p, vec2( o.x / 2.0,        0.0), o);\n"
+    "	pixels[4] = scaleNeighborhood(p, vec2(       0.0, -o.y / 2.0), o);\n"
+    "	gl_FragColor = scale2x(pixels, p * 2.0);\n"
+    "}\n";
 
 
 
@@ -345,7 +370,6 @@ void bk_render_fbo(GLuint *texture, int width, int height)
 
     
     glUniform2f(glGetUniformLocation(bkShaderProgram, "texSize"), (float)width, (float)height);
-    glUniform1f(glGetUniformLocation(bkShaderProgram, "boundBrightness"), 0.9f);
 
     // 使用三角扇绘制一个矩形（四个顶点）
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
