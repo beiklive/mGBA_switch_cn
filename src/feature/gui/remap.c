@@ -8,11 +8,13 @@
 #include <mgba-util/gui.h>
 #include <mgba-util/gui/menu.h>
 
+#include <beiklive/beiklive.h>
+
 void mGUIRemapKeys(struct GUIParams* params, struct mInputMap* map, const struct GUIInputKeys* keys) {
 	struct GUIMenu menu = {
 		.title = "按键映射",
 		.index = 0,
-		.background = 0
+		.background = &bk_global_runner->background.d
 	};
 	GUIMenuItemListInit(&menu.items, 0);
 	const char* keyNames[keys->nKeys + 1];
