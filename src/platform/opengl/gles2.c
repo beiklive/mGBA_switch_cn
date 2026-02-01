@@ -935,7 +935,7 @@ static bool _loadUniform(struct Configuration* description, size_t pass, struct 
 	uniform->name = strdup(strstr(uniform->name, "uniform.") + strlen("uniform."));
 	return true;
 }
-
+// BKMARK 读取shader的配置文件，并加载shader代码和uniform变量
 bool mGLES2ShaderLoad(struct VideoShader* shader, struct VDir* dir) {
 	struct VFile* manifest = dir->openFile(dir, "manifest.ini", O_RDONLY);
 	if (!manifest) {

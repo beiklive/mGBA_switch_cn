@@ -32,6 +32,7 @@ endif()
 
 set(BEIKLIVE_SRC
 	beiklive.c
+	beiklive_shader.c
 	beiklive_gl.c)
 
 add_executable(${BINARY_NAME}.elf ${GUI_SRC} ${PLATFORM_SRC} main.c ${BEIKLIVE_SRC})
