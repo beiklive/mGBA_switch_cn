@@ -38,6 +38,101 @@ uint32_t g_bk_config_color[BK_CONFIG_COLOR_MAX] = {
 	BK_RGBA_GRAY  
 };
 
+#define MAX_PASSES 8
+
+
+static const GLchar* const _gles2Header =
+	"#version 100\n"
+	"precision mediump float;\n";
+
+static const GLchar* const _gl2Header =
+	"#version 120\n";
+
+static const GLchar* const _gl32VHeader =
+	"#version 150 core\n"
+	"#define attribute in\n"
+	"#define varying out\n";
+
+static const GLchar* const _gl32FHeader =
+	"#version 150 core\n"
+	"#define varying in\n"
+	"#define texture2D texture\n"
+	"out vec4 compat_FragColor;\n"
+	"#define gl_FragColor compat_FragColor\n";
+
+static const char* const _vertexShader =
+    "attribute vec4 position;\n"
+    "attribute vec2 texcoord;\n"
+    "varying vec2 texCoord;\n"
+    
+    "void main() {\n"
+    "   gl_Position = position;\n"
+    "   texCoord = texcoord;\n"
+    "}";
+
+static const char* const _nullVertexShader =
+    "attribute vec4 position;\n"
+    "attribute vec2 texcoord;\n"
+    "varying vec2 texCoord;\n"
+    
+    "void main() {\n"
+    "   gl_Position = position;\n"
+    "   texCoord = texcoord;\n"
+    "}";
+
+static const char* const _fragmentShader =
+	"varying vec2 texCoord;\n"
+	"uniform sampler2D tex;\n"
+	"uniform float gamma;\n"
+	"uniform vec3 desaturation;\n"
+	"uniform vec3 scale;\n"
+	"uniform vec3 bias;\n"
+
+	"void main() {\n"
+	"	vec4 color = texture2D(tex, texCoord);\n"
+	"	color.a = 1.;\n"
+	"	float average = dot(color.rgb, vec3(1.)) / 3.;\n"
+	"	color.rgb = mix(color.rgb, vec3(average), desaturation);\n"
+	"	color.rgb = scale * pow(color.rgb, vec3(gamma, gamma, gamma)) + bias;\n"
+	"	gl_FragColor = color;\n"
+	"}";
+
+static const char* const _nullFragmentShader =
+	"varying vec2 texCoord;\n"
+	"uniform sampler2D tex;\n"
+
+	"void main() {\n"
+	"	vec4 color = texture2D(tex, texCoord);\n"
+	"	color.a = 1.;\n"
+	"	gl_FragColor = color;\n"
+	"}";
+
+static const char* const _interframeFragmentShader =
+	"varying vec2 texCoord;\n"
+	"uniform sampler2D tex;\n"
+
+	"void main() {\n"
+	"	vec4 color = texture2D(tex, texCoord);\n"
+	"	color.a = 0.5;\n"
+	"	gl_FragColor = color;\n"
+	"}";
+
+void mBKGLES2UniformListInit(struct mBKGLES2UniformList* vector, size_t capacity);
+void mBKGLES2UniformListDeinit(struct mBKGLES2UniformList* vector);
+struct mBKGLES2Uniform* mBKGLES2UniformListGetPointer(struct mBKGLES2UniformList* vector, size_t location);
+struct mBKGLES2Uniform const* mBKGLES2UniformListGetConstPointer(const struct mBKGLES2UniformList* vector,
+                                                                 size_t location);
+struct mBKGLES2Uniform* mBKGLES2UniformListAppend(struct mBKGLES2UniformList* vector);
+void mBKGLES2UniformListClear(struct mBKGLES2UniformList* vector);
+void mBKGLES2UniformListResize(struct mBKGLES2UniformList* vector, ssize_t change);
+void mBKGLES2UniformListShift(struct mBKGLES2UniformList* vector, size_t location, size_t difference);
+void mBKGLES2UniformListUnshift(struct mBKGLES2UniformList* vector, size_t location, size_t difference);
+void mBKGLES2UniformListEnsureCapacity(struct mBKGLES2UniformList* vector, size_t capacity);
+size_t mBKGLES2UniformListSize(const struct mBKGLES2UniformList* vector);
+size_t mBKGLES2UniformListIndex(const struct mBKGLES2UniformList* vector, const struct mBKGLES2Uniform* member);
+void mBKGLES2UniformListCopy(struct mBKGLES2UniformList* dest, const struct mBKGLES2UniformList* src);
+
+
 // ============ 内部辅助函数 ============
 
 /**
@@ -1003,4 +1098,625 @@ bool _bk_mask_Extensions(const char* name) {
 		return true;
 	}
 	return false;
+}
+
+
+static bool _lookupIntValue(const struct Configuration* config, const char* section, const char* key, int* out) {
+	const char* charValue = ConfigurationGetValue(config, section, key);
+	if (!charValue) {
+		return false;
+	}
+	char* end;
+	unsigned long value = strtol(charValue, &end, 10);
+	if (*end) {
+		return false;
+	}
+	*out = value;
+	return true;
+}
+
+static bool _lookupFloatValue(const struct Configuration* config, const char* section, const char* key, float* out) {
+	const char* charValue = ConfigurationGetValue(config, section, key);
+	if (!charValue) {
+		return false;
+	}
+	char* end;
+	float value = strtof_u(charValue, &end);
+	if (*end) {
+		return false;
+	}
+	*out = value;
+	return true;
+}
+
+static bool _lookupBoolValue(const struct Configuration* config, const char* section, const char* key, GLboolean* out) {
+	const char* charValue = ConfigurationGetValue(config, section, key);
+	if (!charValue) {
+		return false;
+	}
+	if (!strcmp(charValue, "true")) {
+		*out = GL_TRUE;
+		return true;
+	}
+	if (!strcmp(charValue, "false")) {
+		*out = GL_FALSE;
+		return true;
+	}
+	char* end;
+	unsigned long value = strtol(charValue, &end, 10);
+	if (*end) {
+		return false;
+	}
+	*out = value;
+	return true;
+}
+
+
+
+
+void mBKGLES2UniformListInit(struct mBKGLES2UniformList* vector, size_t capacity) {
+	vector->size = 0;
+	if (capacity == 0) {
+		capacity = 4;
+	}
+	vector->capacity = capacity;
+	vector->vector = calloc(capacity, sizeof(struct mBKGLES2Uniform));
+}
+void mBKGLES2UniformListDeinit(struct mBKGLES2UniformList* vector) {
+	free(vector->vector);
+	vector->vector = 0;
+	vector->capacity = 0;
+	vector->size = 0;
+}
+struct mBKGLES2Uniform* mBKGLES2UniformListGetPointer(struct mBKGLES2UniformList* vector, size_t location) {
+	return &vector->vector[location];
+}
+struct mBKGLES2Uniform const* mBKGLES2UniformListGetConstPointer(const struct mBKGLES2UniformList* vector,
+                                                                 size_t location) {
+	return &vector->vector[location];
+}
+struct mBKGLES2Uniform* mBKGLES2UniformListAppend(struct mBKGLES2UniformList* vector) {
+	mBKGLES2UniformListResize(vector, 1);
+	return &vector->vector[vector->size - 1];
+}
+void mBKGLES2UniformListResize(struct mBKGLES2UniformList* vector, ssize_t change) {
+	if (change > 0) {
+		mBKGLES2UniformListEnsureCapacity(vector, vector->size + change);
+	}
+	vector->size += change;
+}
+void mBKGLES2UniformListClear(struct mBKGLES2UniformList* vector) {
+	vector->size = 0;
+}
+void mBKGLES2UniformListEnsureCapacity(struct mBKGLES2UniformList* vector, size_t capacity) {
+	if (capacity <= vector->capacity) {
+		return;
+	}
+	while (capacity > vector->capacity) {
+		vector->capacity <<= 1;
+	}
+	vector->vector = realloc(vector->vector, vector->capacity * sizeof(struct mBKGLES2Uniform));
+}
+void mBKGLES2UniformListShift(struct mBKGLES2UniformList* vector, size_t location, size_t difference) {
+	memmove(&vector->vector[location], &vector->vector[location + difference],
+	        (vector->size - location - difference) * sizeof(struct mBKGLES2Uniform));
+	vector->size -= difference;
+}
+void mBKGLES2UniformListUnshift(struct mBKGLES2UniformList* vector, size_t location, size_t difference) {
+	mBKGLES2UniformListResize(vector, difference);
+	memmove(&vector->vector[location + difference], &vector->vector[location],
+	        (vector->size - location - difference) * sizeof(struct mBKGLES2Uniform));
+}
+size_t mBKGLES2UniformListSize(const struct mBKGLES2UniformList* vector) {
+	return vector->size;
+}
+size_t mBKGLES2UniformListIndex(const struct mBKGLES2UniformList* vector, const struct mBKGLES2Uniform* member) {
+	return member - (const struct mBKGLES2Uniform*) vector->vector;
+}
+void mBKGLES2UniformListCopy(struct mBKGLES2UniformList* dest, const struct mBKGLES2UniformList* src) {
+	mBKGLES2UniformListEnsureCapacity(dest, src->size);
+	memcpy(dest->vector, src->vector, src->size * sizeof(struct mBKGLES2Uniform));
+	dest->size = src->size;
+}
+
+
+static void _loadValue(struct Configuration* description, const char* name, GLenum type, const char* field, union mBKGLES2UniformValue* value) {
+	char fieldName[16];
+	switch (type) {
+	case GL_FLOAT:
+		value->f = 0;
+		_lookupFloatValue(description, name, field, &value->f);
+		break;
+	case GL_FLOAT_VEC2:
+		value->fvec2[0] = 0;
+		value->fvec2[1] = 0;
+		snprintf(fieldName, sizeof(fieldName), "%s[0]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fvec2[0]);
+		snprintf(fieldName, sizeof(fieldName), "%s[1]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fvec2[1]);
+		break;
+	case GL_FLOAT_VEC3:
+		value->fvec3[0] = 0;
+		value->fvec3[1] = 0;
+		value->fvec3[2] = 0;
+		snprintf(fieldName, sizeof(fieldName), "%s[0]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fvec3[0]);
+		snprintf(fieldName, sizeof(fieldName), "%s[1]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fvec3[1]);
+		snprintf(fieldName, sizeof(fieldName), "%s[2]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fvec3[2]);
+		break;
+	case GL_FLOAT_VEC4:
+		value->fvec4[0] = 0;
+		value->fvec4[1] = 0;
+		value->fvec4[2] = 0;
+		value->fvec4[3] = 0;
+		snprintf(fieldName, sizeof(fieldName), "%s[0]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fvec4[0]);
+		snprintf(fieldName, sizeof(fieldName), "%s[1]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fvec4[1]);
+		snprintf(fieldName, sizeof(fieldName), "%s[2]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fvec4[2]);
+		snprintf(fieldName, sizeof(fieldName), "%s[3]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fvec4[3]);
+		break;
+	case GL_FLOAT_MAT2:
+		value->fmat2x2[0] = 0;
+		value->fmat2x2[1] = 0;
+		value->fmat2x2[2] = 0;
+		value->fmat2x2[3] = 0;
+		snprintf(fieldName, sizeof(fieldName), "%s[0,0]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat2x2[0]);
+		snprintf(fieldName, sizeof(fieldName), "%s[0,1]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat2x2[1]);
+		snprintf(fieldName, sizeof(fieldName), "%s[1,0]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat2x2[2]);
+		snprintf(fieldName, sizeof(fieldName), "%s[1,1]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat2x2[3]);
+		break;
+	case GL_FLOAT_MAT3:
+		value->fmat3x3[0] = 0;
+		value->fmat3x3[1] = 0;
+		value->fmat3x3[2] = 0;
+		value->fmat3x3[3] = 0;
+		value->fmat3x3[4] = 0;
+		value->fmat3x3[5] = 0;
+		value->fmat3x3[6] = 0;
+		value->fmat3x3[7] = 0;
+		value->fmat3x3[8] = 0;
+		snprintf(fieldName, sizeof(fieldName), "%s[0,0]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat3x3[0]);
+		snprintf(fieldName, sizeof(fieldName), "%s[0,1]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat3x3[1]);
+		snprintf(fieldName, sizeof(fieldName), "%s[0,2]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat3x3[2]);
+		snprintf(fieldName, sizeof(fieldName), "%s[1,0]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat3x3[3]);
+		snprintf(fieldName, sizeof(fieldName), "%s[1,1]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat3x3[4]);
+		snprintf(fieldName, sizeof(fieldName), "%s[1,2]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat3x3[5]);
+		snprintf(fieldName, sizeof(fieldName), "%s[2,0]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat3x3[6]);
+		snprintf(fieldName, sizeof(fieldName), "%s[2,1]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat3x3[7]);
+		snprintf(fieldName, sizeof(fieldName), "%s[2,2]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat3x3[8]);
+		break;
+	case GL_FLOAT_MAT4:
+		value->fmat4x4[0] = 0;
+		value->fmat4x4[1] = 0;
+		value->fmat4x4[2] = 0;
+		value->fmat4x4[3] = 0;
+		value->fmat4x4[4] = 0;
+		value->fmat4x4[5] = 0;
+		value->fmat4x4[6] = 0;
+		value->fmat4x4[7] = 0;
+		value->fmat4x4[8] = 0;
+		value->fmat4x4[9] = 0;
+		value->fmat4x4[10] = 0;
+		value->fmat4x4[11] = 0;
+		value->fmat4x4[12] = 0;
+		value->fmat4x4[13] = 0;
+		value->fmat4x4[14] = 0;
+		value->fmat4x4[15] = 0;
+		snprintf(fieldName, sizeof(fieldName), "%s[0,0]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat4x4[0]);
+		snprintf(fieldName, sizeof(fieldName), "%s[0,1]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat4x4[1]);
+		snprintf(fieldName, sizeof(fieldName), "%s[0,2]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat4x4[2]);
+		snprintf(fieldName, sizeof(fieldName), "%s[0,3]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat4x4[3]);
+		snprintf(fieldName, sizeof(fieldName), "%s[1,0]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat4x4[4]);
+		snprintf(fieldName, sizeof(fieldName), "%s[1,1]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat4x4[5]);
+		snprintf(fieldName, sizeof(fieldName), "%s[1,2]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat4x4[6]);
+		snprintf(fieldName, sizeof(fieldName), "%s[1,3]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat4x4[7]);
+		snprintf(fieldName, sizeof(fieldName), "%s[2,0]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat4x4[8]);
+		snprintf(fieldName, sizeof(fieldName), "%s[2,1]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat4x4[9]);
+		snprintf(fieldName, sizeof(fieldName), "%s[2,2]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat4x4[10]);
+		snprintf(fieldName, sizeof(fieldName), "%s[2,3]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat4x4[11]);
+		snprintf(fieldName, sizeof(fieldName), "%s[3,0]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat4x4[12]);
+		snprintf(fieldName, sizeof(fieldName), "%s[3,1]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat4x4[13]);
+		snprintf(fieldName, sizeof(fieldName), "%s[3,2]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat4x4[14]);
+		snprintf(fieldName, sizeof(fieldName), "%s[3,3]", field);
+		_lookupFloatValue(description, name, fieldName, &value->fmat4x4[15]);
+		break;
+	case GL_INT:
+		value->i = 0;
+		_lookupIntValue(description, name, field, &value->i);
+		break;
+	case GL_INT_VEC2:
+		value->ivec2[0] = 0;
+		value->ivec2[1] = 0;
+		snprintf(fieldName, sizeof(fieldName), "%s[0]", field);
+		_lookupIntValue(description, name, fieldName, &value->ivec2[0]);
+		snprintf(fieldName, sizeof(fieldName), "%s[1]", field);
+		_lookupIntValue(description, name, fieldName, &value->ivec2[1]);
+		break;
+	case GL_INT_VEC3:
+		value->ivec3[0] = 0;
+		value->ivec3[1] = 0;
+		value->ivec3[2] = 0;
+		snprintf(fieldName, sizeof(fieldName), "%s[0]", field);
+		_lookupIntValue(description, name, fieldName, &value->ivec3[0]);
+		snprintf(fieldName, sizeof(fieldName), "%s[1]", field);
+		_lookupIntValue(description, name, fieldName, &value->ivec3[1]);
+		snprintf(fieldName, sizeof(fieldName), "%s[2]", field);
+		_lookupIntValue(description, name, fieldName, &value->ivec3[2]);
+		break;
+	case GL_INT_VEC4:
+		value->ivec4[0] = 0;
+		value->ivec4[1] = 0;
+		value->ivec4[2] = 0;
+		value->ivec4[3] = 0;
+		snprintf(fieldName, sizeof(fieldName), "%s[0]", field);
+		_lookupIntValue(description, name, fieldName, &value->ivec4[0]);
+		snprintf(fieldName, sizeof(fieldName), "%s[1]", field);
+		_lookupIntValue(description, name, fieldName, &value->ivec4[1]);
+		snprintf(fieldName, sizeof(fieldName), "%s[2]", field);
+		_lookupIntValue(description, name, fieldName, &value->ivec4[2]);
+		snprintf(fieldName, sizeof(fieldName), "%s[3]", field);
+		_lookupIntValue(description, name, fieldName, &value->ivec4[3]);
+		break;
+	case GL_BOOL:
+		value->b = 0;
+		_lookupBoolValue(description, name, field, &value->b);
+		break;
+	case GL_BOOL_VEC2:
+		value->bvec2[0] = 0;
+		value->bvec2[1] = 0;
+		snprintf(fieldName, sizeof(fieldName), "%s[0]", field);
+		_lookupBoolValue(description, name, fieldName, &value->bvec2[0]);
+		snprintf(fieldName, sizeof(fieldName), "%s[1]", field);
+		_lookupBoolValue(description, name, fieldName, &value->bvec2[1]);
+		break;
+	case GL_BOOL_VEC3:
+		value->bvec3[0] = 0;
+		value->bvec3[1] = 0;
+		value->bvec3[2] = 0;
+		snprintf(fieldName, sizeof(fieldName), "%s[0]", field);
+		_lookupBoolValue(description, name, fieldName, &value->bvec3[0]);
+		snprintf(fieldName, sizeof(fieldName), "%s[1]", field);
+		_lookupBoolValue(description, name, fieldName, &value->bvec3[1]);
+		snprintf(fieldName, sizeof(fieldName), "%s[2]", field);
+		_lookupBoolValue(description, name, fieldName, &value->bvec3[2]);
+		break;
+	case GL_BOOL_VEC4:
+		value->bvec4[0] = 0;
+		value->bvec4[1] = 0;
+		value->bvec4[2] = 0;
+		value->bvec4[3] = 0;
+		snprintf(fieldName, sizeof(fieldName), "%s[0]", field);
+		_lookupBoolValue(description, name, fieldName, &value->bvec4[0]);
+		snprintf(fieldName, sizeof(fieldName), "%s[1]", field);
+		_lookupBoolValue(description, name, fieldName, &value->bvec4[1]);
+		snprintf(fieldName, sizeof(fieldName), "%s[2]", field);
+		_lookupBoolValue(description, name, fieldName, &value->bvec4[2]);
+		snprintf(fieldName, sizeof(fieldName), "%s[3]", field);
+		_lookupBoolValue(description, name, fieldName, &value->bvec4[3]);
+		break;
+	}
+}
+
+static void _uniformHandler(const char* sectionName, void* user) {
+	struct mBKGLES2UniformList* uniforms = user;
+	unsigned passId;
+	int sentinel;
+	if (sscanf(sectionName, "pass.%u.uniform.%n", &passId, &sentinel) < 1) {
+		return;
+	}
+	struct mBKGLES2Uniform* u = mBKGLES2UniformListAppend(uniforms);
+	u->name = sectionName;
+}
+
+static bool _loadUniform(struct Configuration* description, size_t pass, struct mBKGLES2Uniform* uniform) {
+	unsigned passId;
+	if (sscanf(uniform->name, "pass.%u.uniform.", &passId) < 1 || passId != pass) {
+		return false;
+	}
+	const char* type = ConfigurationGetValue(description, uniform->name, "type");
+	if (!type) {
+		return false;
+	}
+	if (!strcmp(type, "float")) {
+		uniform->type = GL_FLOAT;
+	} else if (!strcmp(type, "float2")) {
+		uniform->type = GL_FLOAT_VEC2;
+	} else if (!strcmp(type, "float3")) {
+		uniform->type = GL_FLOAT_VEC3;
+	} else if (!strcmp(type, "float4")) {
+		uniform->type = GL_FLOAT_VEC4;
+	} else if (!strcmp(type, "float2x2")) {
+		uniform->type = GL_FLOAT_MAT2;
+	} else if (!strcmp(type, "float3x3")) {
+		uniform->type = GL_FLOAT_MAT3;
+	} else if (!strcmp(type, "float4x4")) {
+		uniform->type = GL_FLOAT_MAT4;
+	} else if (!strcmp(type, "int")) {
+		uniform->type = GL_INT;
+	} else if (!strcmp(type, "int2")) {
+		uniform->type = GL_INT_VEC2;
+	} else if (!strcmp(type, "int3")) {
+		uniform->type = GL_INT_VEC3;
+	} else if (!strcmp(type, "int4")) {
+		uniform->type = GL_INT_VEC4;
+	} else if (!strcmp(type, "bool")) {
+		uniform->type = GL_BOOL;
+	} else if (!strcmp(type, "bool2")) {
+		uniform->type = GL_BOOL_VEC2;
+	} else if (!strcmp(type, "bool3")) {
+		uniform->type = GL_BOOL_VEC3;
+	} else if (!strcmp(type, "bool4")) {
+		uniform->type = GL_BOOL_VEC4;
+	} else {
+		return false;
+	}
+	_loadValue(description, uniform->name, uniform->type, "default", &uniform->value);
+	_loadValue(description, uniform->name, uniform->type, "min", &uniform->min);
+	_loadValue(description, uniform->name, uniform->type, "max", &uniform->max);
+	const char* readable = ConfigurationGetValue(description, uniform->name, "readableName");
+	if (readable) {
+		uniform->readableName = strdup(readable);
+	} else {
+		uniform->readableName = 0;
+	}
+	uniform->name = strdup(strstr(uniform->name, "uniform.") + strlen("uniform."));
+	return true;
+}
+
+void mBKGLES2ShaderInit(struct mBKGLES2Shader* shader, const char* vs, const char* fs, int width, int height, bool integerScaling, struct mBKGLES2Uniform* uniforms, size_t nUniforms) {
+	shader->width = width;
+	shader->height = height;
+	shader->integerScaling = integerScaling;
+	shader->filter = false;
+	shader->blend = false;
+	shader->dirty = true;
+	shader->uniforms = uniforms;
+	shader->nUniforms = nUniforms;
+	glGenFramebuffers(1, &shader->fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, shader->fbo);
+
+	glGenTextures(1, &shader->tex);
+	glBindTexture(GL_TEXTURE_2D, shader->tex);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	if (shader->width > 0 && shader->height > 0) {
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, shader->width, shader->height, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+	} else {
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 512, 512, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);		
+	}
+
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, shader->tex, 0);
+	shader->program = glCreateProgram();
+	shader->vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	shader->fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	const GLchar* shaderBuffer[2];
+	const GLubyte* version = glGetString(GL_VERSION);
+	if (strncmp((const char*) version, "OpenGL ES ", strlen("OpenGL ES ")) == 0) {
+		shaderBuffer[0] = _gles2Header;
+	} else if (version[0] == '2') {
+		shaderBuffer[0] = _gl2Header;
+	} else {
+		shaderBuffer[0] = _gl32VHeader;
+	}
+	if (vs) {
+		shaderBuffer[1] = vs;
+	} else {
+		shaderBuffer[1] = _nullVertexShader;
+	}
+	glShaderSource(shader->vertexShader, 2, shaderBuffer, 0);
+
+	if (shaderBuffer[0] == _gl32VHeader) {
+		shaderBuffer[0] = _gl32FHeader;
+	}
+	if (fs) {
+		shaderBuffer[1] = fs;
+	} else {
+		shaderBuffer[1] = _nullFragmentShader;
+	}
+	glShaderSource(shader->fragmentShader, 2, shaderBuffer, 0);
+
+	glAttachShader(shader->program, shader->vertexShader);
+	glAttachShader(shader->program, shader->fragmentShader);
+	char log[1024];
+	glCompileShader(shader->fragmentShader);
+	glCompileShader(shader->vertexShader);
+	glLinkProgram(shader->program);
+
+	shader->texLocation = glGetUniformLocation(shader->program, "tex");
+	shader->texSizeLocation = glGetUniformLocation(shader->program, "texSize");
+	shader->positionLocation = glGetAttribLocation(shader->program, "position");
+	size_t i;
+	for (i = 0; i < shader->nUniforms; ++i) {
+		shader->uniforms[i].location = glGetUniformLocation(shader->program, shader->uniforms[i].name);
+	}
+
+#ifdef BUILD_GLES3
+	const GLubyte* extensions = glGetString(GL_EXTENSIONS);
+	if (shaderBuffer[0] == _gles2Header || version[0] >= '3' || (extensions && strstr((const char*) extensions, "_vertex_array_object") != NULL)) {
+		glGenVertexArrays(1, &shader->vao);
+		glBindVertexArray(shader->vao);
+		glEnableVertexAttribArray(shader->positionLocation);
+		glVertexAttribPointer(shader->positionLocation, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+		glBindVertexArray(0);
+	} else
+#endif
+	{
+		shader->vao = -1;
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+bool mBKGLES2ShaderLoad(struct BKVideoShader* shader, struct VDir* dir) {
+	struct VFile* manifest = dir->openFile(dir, "manifest.ini", O_RDONLY);
+	if (!manifest) {
+		return false;
+	}
+	bool success = false;
+	struct Configuration description;
+	ConfigurationInit(&description);
+	if (ConfigurationReadVFile(&description, manifest)) {
+		int inShaders;
+		success = _lookupIntValue(&description, "shader", "passes", &inShaders);
+		if (inShaders > MAX_PASSES || inShaders < 1) {
+			success = false;
+		}
+
+		if (success) {
+			struct mBKGLES2Shader* shaderBlock = calloc(inShaders, sizeof(struct mBKGLES2Shader));
+			int n;
+			for (n = 0; n < inShaders; ++n) {
+				char passName[12];
+				snprintf(passName, sizeof(passName), "pass.%u", n);
+				const char* fs = ConfigurationGetValue(&description, passName, "fragmentShader");
+				const char* vs = ConfigurationGetValue(&description, passName, "vertexShader");
+				if (fs && (fs[0] == '.' || strstr(fs, PATH_SEP))) {
+					success = false;
+					break;
+				}
+				if (vs && (vs[0] == '.' || strstr(vs, PATH_SEP))) {
+					success = false;
+					break;
+				}
+				char* fssrc = 0;
+				char* vssrc = 0;
+				if (fs) {
+					struct VFile* fsf = dir->openFile(dir, fs, O_RDONLY);
+					if (!fsf) {
+						success = false;
+						break;
+					}
+					fssrc = malloc(fsf->size(fsf) + 1);
+					fssrc[fsf->size(fsf)] = '\0';
+					fsf->read(fsf, fssrc, fsf->size(fsf));
+					fsf->close(fsf);
+				}
+				if (vs) {
+					struct VFile* vsf = dir->openFile(dir, vs, O_RDONLY);
+					if (!vsf) {
+						success = false;
+						free(fssrc);
+						break;
+					}
+					vssrc = malloc(vsf->size(vsf) + 1);
+					vssrc[vsf->size(vsf)] = '\0';
+					vsf->read(vsf, vssrc, vsf->size(vsf));
+					vsf->close(vsf);
+				}
+				int width = 0;
+				int height = 0;
+				int scaling = 0;
+				_lookupIntValue(&description, passName, "width", &width);
+				_lookupIntValue(&description, passName, "height", &height);
+				_lookupIntValue(&description, passName, "integerScaling", &scaling);
+
+				struct mBKGLES2UniformList uniformVector;
+				mBKGLES2UniformListInit(&uniformVector, 0);
+				ConfigurationEnumerateSections(&description, _uniformHandler, &uniformVector);
+				size_t u;
+				for (u = 0; u < mBKGLES2UniformListSize(&uniformVector); ++u) {
+					struct mBKGLES2Uniform* uniform = mBKGLES2UniformListGetPointer(&uniformVector, u);
+					if (!_loadUniform(&description, n, uniform)) {
+						mBKGLES2UniformListShift(&uniformVector, u, 1);
+						--u;
+					}
+				}
+				u = mBKGLES2UniformListSize(&uniformVector);
+				struct mBKGLES2Uniform* uniformBlock;
+				if (u) {
+					uniformBlock = calloc(u, sizeof(*uniformBlock));
+					memcpy(uniformBlock, mBKGLES2UniformListGetPointer(&uniformVector, 0), sizeof(*uniformBlock) * u);
+				}
+				mBKGLES2UniformListDeinit(&uniformVector);
+				
+				mBKGLES2ShaderInit(&shaderBlock[n], vssrc, fssrc, width, height, scaling, uniformBlock, u);
+				int b = 0;
+				_lookupIntValue(&description, passName, "blend", &b);
+				if (b) {
+					shaderBlock[n].blend = b;
+				}
+				b = 0;
+				_lookupIntValue(&description, passName, "filter", &b);
+				if (b) {
+					shaderBlock[n].filter = b;
+				}
+				free(fssrc);
+				free(vssrc);
+			}
+
+			if (success) {
+				
+				shader->nPasses = inShaders;
+				shader->passes = shaderBlock;
+				shader->name = ConfigurationGetValue(&description, "shader", "name");
+				if (shader->name) {
+					shader->name = strdup(shader->name);
+				}
+				shader->author = ConfigurationGetValue(&description, "shader", "author");
+				if (shader->author) {
+					shader->author = strdup(shader->author);
+				}
+				shader->description = ConfigurationGetValue(&description, "shader", "description");
+				if (shader->description) {
+					shader->description = strdup(shader->description);
+				}
+			} else {
+				inShaders = n;
+				for (n = 0; n < inShaders; ++n) {
+					mBKGLES2ShaderDeinit(&shaderBlock[n]);
+				}
+				free(shaderBlock);
+			}
+		}
+	}
+	manifest->close(manifest);
+	ConfigurationDeinit(&description);
+	return success;
+}
+
+void mBKGLES2ShaderDeinit(struct mBKGLES2Shader* shader) {
+	glDeleteTextures(1, &shader->tex);
+	glDeleteShader(shader->fragmentShader);
+	glDeleteProgram(shader->program);
+	glDeleteFramebuffers(1, &shader->fbo);
+#ifdef BUILD_GLES3
+	if (shader->vao != (GLuint) -1) {
+		glDeleteVertexArrays(1, &shader->vao);
+	}
+#endif
 }

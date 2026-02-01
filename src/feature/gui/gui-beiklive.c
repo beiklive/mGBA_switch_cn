@@ -25,10 +25,197 @@ enum BKGUIAction{
 	BK_CONFIG_MAPNAME,
     BK_CONFIG_MASK,
     BK_CONFIG_SHADER,
+    BK_CONFIG_UNIFORM,
     BK_CONFIG_BACKGROUND,
 	BK_CONFIG_SAVE,
 	BK_CONFIG_SAVE2
 };
+
+static void ReadStateConfig(struct GUIMenu *menu, struct mGUIRunner* runner) {
+        // 读取配置数据
+        struct GUIMenuItem* item;
+        for (int i = 0; i < GUIMenuItemListSize(&menu->items); ++i) {
+            item = GUIMenuItemListGetPointer(&menu->items, i);
+            if (!item->validStates || GUIVariantIsVoid(item->data)) {
+                continue;
+            }
+            if (GUIVariantIsString(item->data)) {
+                if (item->stateMappings) {
+                    size_t j;
+                    for (j = 0; j < item->nStates; ++j) {
+                        const struct GUIVariant* v = &item->stateMappings[j];
+                        struct GUIVariant test;
+                        switch (v->type) {
+                        case GUI_VARIANT_VOID:
+                            if (!mCoreConfigGetValue(&runner->config, item->data.v.s)) {
+                                item->state = j;
+                                break;
+                            }
+                            break;
+                        case GUI_VARIANT_UNSIGNED:
+                            if (mCoreConfigGetUIntValue(&runner->config, item->data.v.s, &test.v.u) && test.v.u == v->v.u) {
+                                item->state = j;
+                                break;
+                            }
+                            break;
+                        case GUI_VARIANT_INT:
+                            if (mCoreConfigGetIntValue(&runner->config, item->data.v.s, &test.v.i) && test.v.i == v->v.i) {
+                                item->state = j;
+                                break;
+                            }
+                            break;
+                        case GUI_VARIANT_FLOAT:
+                            if (mCoreConfigGetFloatValue(&runner->config, item->data.v.s, &test.v.f) && fabsf(test.v.f - v->v.f) <= 1e-3f) {
+                                item->state = j;
+                                break;
+                            }
+                            break;
+                        case GUI_VARIANT_STRING:
+                            test.v.s = mCoreConfigGetValue(&runner->config, item->data.v.s);
+                            if (test.v.s && strcmp(test.v.s, v->v.s) == 0) {
+                                item->state = j;
+                                break;						
+                            }
+                            break;
+                        case GUI_VARIANT_POINTER:
+                            break;
+                        }
+                    }
+                } else {
+                    mCoreConfigGetUIntValue(&runner->config, item->data.v.s, &item->state);
+                }
+            }
+        }
+}
+
+
+void mGUIUniformSet(struct mGUIRunner* runner, int ShaderIndex)
+{
+    if (ShaderIndex == 0) {
+        return;
+    }
+    struct BKVideoShader* shader = bk_global_shaders->shaders[ShaderIndex - 1];
+    if (!shader) {
+        return;
+    }
+    const char* name = shader->name;
+    const char* author = shader->author;
+    const char* description = shader->description;
+
+    struct GUIMenu menu = {
+		.title = name,
+        .subtitle = author,
+        .background = &runner->background.d,
+		.index = 0
+	};
+    GUIMenuItemListInit(&menu.items, 0);
+    for (size_t i = 0; i < shader->nPasses; i++) {
+        struct mBKGLES2Shader* pass = &shader->passes[i];
+        if (pass->uniforms) {
+            for (size_t j = 0; j < pass->nUniforms; j++) {
+                const char* readableName = pass->uniforms[j].readableName;
+                size_t u;
+                for (u = 0; u < pass->nUniforms; ++u) {
+                    struct mBKGLES2Uniform* uniform = &pass->uniforms[u];
+                    switch (uniform->type) {
+                    case GL_FLOAT:
+                        glUniform1f(uniform->location, uniform->value.f);
+                        // 拼接为字符串
+                        char str[100];
+                        sprintf(str, "%s [%f - %f]", readableName, uniform->min.f, uniform->max.f);
+                        *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+                            .title = str,
+                            .data = GUI_V_U(u | BK_CONFIG_UNIFORM << 16),
+                            .leftText = "默认值",
+                        };
+                        break;
+                    // case GL_INT:
+                    //     glUniform1i(uniform->location, uniform->value.i);
+                    //     break;
+                    // case GL_BOOL:
+                    //     glUniform1i(uniform->location, uniform->value.b);
+                    //     break;
+                    // case GL_FLOAT_VEC2:
+                    //     glUniform2fv(uniform->location, 1, uniform->value.fvec2);
+                    //     break;
+                    // case GL_FLOAT_VEC3:
+                    //     glUniform3fv(uniform->location, 1, uniform->value.fvec3);
+                    //     break;
+                    // case GL_FLOAT_VEC4:
+                    //     glUniform4fv(uniform->location, 1, uniform->value.fvec4);
+                    //     break;
+                    // case GL_INT_VEC2:
+                    //     glUniform2iv(uniform->location, 1, uniform->value.ivec2);
+                    //     break;
+                    // case GL_INT_VEC3:
+                    //     glUniform3iv(uniform->location, 1, uniform->value.ivec3);
+                    //     break;
+                    // case GL_INT_VEC4:
+                    //     glUniform4iv(uniform->location, 1, uniform->value.ivec4);
+                    //     break;
+                    // case GL_BOOL_VEC2:
+                    //     glUniform2i(uniform->location, uniform->value.bvec2[0], uniform->value.bvec2[1]);
+                    //     break;
+                    // case GL_BOOL_VEC3:
+                    //     glUniform3i(uniform->location, uniform->value.bvec3[0], uniform->value.bvec3[1], uniform->value.bvec3[2]);
+                    //     break;
+                    // case GL_BOOL_VEC4:
+                    //     glUniform4i(uniform->location, uniform->value.bvec4[0], uniform->value.bvec4[1], uniform->value.bvec4[2], uniform->value.bvec4[3]);
+                    //     break;
+                    // case GL_FLOAT_MAT2:
+                    //     glUniformMatrix2fv(uniform->location, 1, GL_FALSE, uniform->value.fmat2x2);
+                    //     break;
+                    // case GL_FLOAT_MAT3:
+                    //     glUniformMatrix3fv(uniform->location, 1, GL_FALSE, uniform->value.fmat3x3);
+                    //     break;
+                    // case GL_FLOAT_MAT4:
+                    //     glUniformMatrix4fv(uniform->location, 1, GL_FALSE, uniform->value.fmat4x4);
+                    //     break;
+                        default:
+                            break;
+                    }
+                }
+
+
+
+                *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+                    .title = "是否启用滤镜功能",
+                    .data = GUI_V_S(BK_META_SHADER_ENABLE),
+                    .submenu = 0,
+                    .state = 0,
+                    .validStates = (const char*[]) {
+                        "不启用", "启用"
+                    },
+                    .nStates = 2
+                };
+            }
+        }
+
+    }
+    *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+        .title = "保存设置",
+        .data = GUI_V_U(BK_CONFIG_SAVE),
+    };
+    *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+        .title = "返回",
+        .data = GUI_V_V,
+    };
+
+    while(true)
+    {
+        struct GUIMenuItem* item;
+		enum GUIMenuExitReason reason = GUIShowMenu(&runner->params, &menu, &item);
+
+        if (reason != GUI_MENU_EXIT_ACCEPT || GUIVariantIsVoid(item->data)) {
+            GUIMenuItemListClear(&menu.items);
+			break;
+		}
+        enum BKGUIAction action = (enum BKGUIAction) item->data.v.u;
+    }
+
+    GUIMenuItemListDeinit(&menu.items);
+}
+
 
 void mGUIShaderSet(struct mGUIRunner* runner)
 {
@@ -38,55 +225,60 @@ void mGUIShaderSet(struct mGUIRunner* runner)
 		.index = 0
 	};
     GUIMenuItemListInit(&menu.items, 0);
+
+    
+    *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+        .title = "是否启用滤镜功能",
+        .data = GUI_V_S(BK_META_SHADER_ENABLE),
+        .submenu = 0,
+        .state = 0,
+        .validStates = (const char*[]) {
+            "不启用", "启用"
+        },
+        .nStates = 2
+    };
+    
+    int shaderCount = bk_shader_get_count();
+    char** shaderNames = bk_shader_get_names();
+
+    int total = shaderCount + 1;
+    const char** names = malloc(sizeof(const char*) * total);
+    if (!names) {
+        return;
+    }
+    names[0] = "无滤镜";
+    for (int i = 0; i < shaderCount; i++) {
+        names[i + 1] = shaderNames[i];
+    }
+    free(shaderNames);
+
+    *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+        .title = "选择滤镜",
+        .data = GUI_V_S(BK_META_SHADER_INDEX),
+        .submenu = 0,
+        .state = 0,
+        .id = 4616,
+        .validStates = names,
+        .nStates = total
+    };
+    
+    *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+        .title = "修改滤镜参数",
+        .data = GUI_V_U(BK_CONFIG_STATUS_1),
+    };
+
+    *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+        .title = "保存设置",
+        .data = GUI_V_U(BK_CONFIG_SAVE),
+    };
     *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
         .title = "返回",
         .data = GUI_V_V,
     };
-    *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-        .title = "保存为当前游戏滤镜",
-        .data = GUI_V_U(BK_CONFIG_SAVE),
-    };
 
-    int platform = runner->core->platform(runner->core);
-    if (platform == 0) {
-        *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-            .title = "保存为全局GBA游戏滤镜",
-            .data = GUI_V_U(BK_CONFIG_SAVE2),
-        };
-    }else{
-        *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-            .title = "保存为全局GB/GBC游戏滤镜",
-            .data = GUI_V_U(BK_CONFIG_SAVE2),
-        };
-    }
-    *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-			.title = "[滤镜列表]",
-			.readonly = true,
-    };
-
-
-
-    // // 创建菜单项
-    // *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-    //     .title = "数据测试",
-    //     .data = GUI_V_U(RUNNER_SAVE_STATE | RUNNER_STATE(1)),  // 使用字符串变体宏
-    //     .submenu = NULL,
-    //     .state = 0,
-    //     .validStates = validStates,
-    //     .stateMappings = validVariants,
-    //     .nStates = count,
-    //     .readonly = false
-    // };
-
-
-
+    ReadStateConfig(&menu, runner);
     while(true)
     {
-        // BKTODO 循环列表显示滤镜
-
-
-
-
         struct GUIMenuItem* item;
 		enum GUIMenuExitReason reason = GUIShowMenu(&runner->params, &menu, &item);
 
@@ -97,18 +289,80 @@ void mGUIShaderSet(struct mGUIRunner* runner)
         enum BKGUIAction action = (enum BKGUIAction) item->data.v.u;
         if(action == BK_CONFIG_SAVE)
         {
-
+            for (int i = 0; i < GUIMenuItemListSize(&menu.items); ++i) {
+                item = GUIMenuItemListGetPointer(&menu.items, i);
+				if (!item->validStates || !GUIVariantIsString(item->data)) {
+					continue;
+				}
+                if (item->stateMappings) {
+					const struct GUIVariant* v = &item->stateMappings[item->state];
+					switch (v->type) {
+					case GUI_VARIANT_VOID:
+						mCoreConfigSetValue(&runner->config, item->data.v.s, NULL);
+						break;
+					case GUI_VARIANT_UNSIGNED:
+						mCoreConfigSetUIntValue(&runner->config, item->data.v.s, v->v.u);
+						break;
+					case GUI_VARIANT_INT:
+						mCoreConfigSetUIntValue(&runner->config, item->data.v.s, v->v.i);
+						break;
+					case GUI_VARIANT_FLOAT:
+						mCoreConfigSetFloatValue(&runner->config, item->data.v.s, v->v.f);
+						break;
+					case GUI_VARIANT_STRING:
+						mCoreConfigSetValue(&runner->config, item->data.v.s, v->v.s);
+						break;
+					case GUI_VARIANT_POINTER:
+						break;
+					}
+                }
+                else
+                {
+                    mCoreConfigSetUIntValue(&runner->config, item->data.v.s, item->state);
+                }
+            }
+            mCoreConfigSave(&runner->config);
+			mCoreLoadForeignConfig(runner->core, &runner->config);
+            GUIShowMessageBox(&runner->params, GUI_MESSAGE_BOX_OK, 240, "保存完成!");
+            break;
         }
-        else if(action == BK_CONFIG_SAVE2)
-        {
-
+        if(action == BK_CONFIG_STATUS_1){
+            for (int i = 0; i < GUIMenuItemListSize(&menu.items); ++i) {
+                item = GUIMenuItemListGetPointer(&menu.items, i);
+				if (!item->validStates || !GUIVariantIsString(item->data)) {
+					continue;
+				}
+                if(item->id == 4616)
+                {
+                    // 选择滤镜
+                    int index = item->state;
+                    if(index == 0)
+                    {
+                        GUIShowMessageBox(&runner->params, GUI_MESSAGE_BOX_OK, 240, "先选择滤镜再设置参数!");
+                    }else{
+                        mGUIUniformSet(runner, index);
+                    }
+                }
+            }
         }
+
+
+
+
+
+
+
+
+
+
+
+
 
         GUIMenuItemListClear(&menu.items);
     }
 
     GUIMenuItemListDeinit(&menu.items);
-
+    free(names);
 }
 
 
@@ -267,61 +521,9 @@ void mGUIShowMaskSet(struct mGUIRunner* runner)
 
 
         // 读取配置数据
+        ReadStateConfig(&menu, runner);
+
         struct GUIMenuItem* item;
-        for (int i = 0; i < GUIMenuItemListSize(&menu.items); ++i) {
-            item = GUIMenuItemListGetPointer(&menu.items, i);
-            if (!item->validStates || GUIVariantIsVoid(item->data)) {
-                continue;
-            }
-            if (GUIVariantIsString(item->data)) {
-                if (item->stateMappings) {
-                    size_t j;
-                    for (j = 0; j < item->nStates; ++j) {
-                        const struct GUIVariant* v = &item->stateMappings[j];
-                        struct GUIVariant test;
-                        switch (v->type) {
-                        case GUI_VARIANT_VOID:
-                            if (!mCoreConfigGetValue(&runner->config, item->data.v.s)) {
-                                item->state = j;
-                                break;
-                            }
-                            break;
-                        case GUI_VARIANT_UNSIGNED:
-                            if (mCoreConfigGetUIntValue(&runner->config, item->data.v.s, &test.v.u) && test.v.u == v->v.u) {
-                                item->state = j;
-                                break;
-                            }
-                            break;
-                        case GUI_VARIANT_INT:
-                            if (mCoreConfigGetIntValue(&runner->config, item->data.v.s, &test.v.i) && test.v.i == v->v.i) {
-                                item->state = j;
-                                break;
-                            }
-                            break;
-                        case GUI_VARIANT_FLOAT:
-                            if (mCoreConfigGetFloatValue(&runner->config, item->data.v.s, &test.v.f) && fabsf(test.v.f - v->v.f) <= 1e-3f) {
-                                item->state = j;
-                                break;
-                            }
-                            break;
-                        case GUI_VARIANT_STRING:
-                            test.v.s = mCoreConfigGetValue(&runner->config, item->data.v.s);
-                            if (test.v.s && strcmp(test.v.s, v->v.s) == 0) {
-                                item->state = j;
-                                break;						
-                            }
-                            break;
-                        case GUI_VARIANT_POINTER:
-                            break;
-                        }
-                    }
-                } else {
-                    mCoreConfigGetUIntValue(&runner->config, item->data.v.s, &item->state);
-                }
-            }
-        }
-
-
 
 		enum GUIMenuExitReason reason = GUIShowMenu(&runner->params, &menu, &item);
         if (reason != GUI_MENU_EXIT_ACCEPT || GUIVariantIsVoid(item->data)) {
@@ -484,62 +686,9 @@ void mGUIBackgroundSet(struct mGUIRunner* runner)
         };
 
 
-        // 读取配置数据
+        ReadStateConfig(&menu, runner);
+
         struct GUIMenuItem* item;
-        for (int i = 0; i < GUIMenuItemListSize(&menu.items); ++i) {
-            item = GUIMenuItemListGetPointer(&menu.items, i);
-            if (!item->validStates || GUIVariantIsVoid(item->data)) {
-                continue;
-            }
-            if (GUIVariantIsString(item->data)) {
-                if (item->stateMappings) {
-                    size_t j;
-                    for (j = 0; j < item->nStates; ++j) {
-                        const struct GUIVariant* v = &item->stateMappings[j];
-                        struct GUIVariant test;
-                        switch (v->type) {
-                        case GUI_VARIANT_VOID:
-                            if (!mCoreConfigGetValue(&runner->config, item->data.v.s)) {
-                                item->state = j;
-                                break;
-                            }
-                            break;
-                        case GUI_VARIANT_UNSIGNED:
-                            if (mCoreConfigGetUIntValue(&runner->config, item->data.v.s, &test.v.u) && test.v.u == v->v.u) {
-                                item->state = j;
-                                break;
-                            }
-                            break;
-                        case GUI_VARIANT_INT:
-                            if (mCoreConfigGetIntValue(&runner->config, item->data.v.s, &test.v.i) && test.v.i == v->v.i) {
-                                item->state = j;
-                                break;
-                            }
-                            break;
-                        case GUI_VARIANT_FLOAT:
-                            if (mCoreConfigGetFloatValue(&runner->config, item->data.v.s, &test.v.f) && fabsf(test.v.f - v->v.f) <= 1e-3f) {
-                                item->state = j;
-                                break;
-                            }
-                            break;
-                        case GUI_VARIANT_STRING:
-                            test.v.s = mCoreConfigGetValue(&runner->config, item->data.v.s);
-                            if (test.v.s && strcmp(test.v.s, v->v.s) == 0) {
-                                item->state = j;
-                                break;						
-                            }
-                            break;
-                        case GUI_VARIANT_POINTER:
-                            break;
-                        }
-                    }
-                } else {
-                    mCoreConfigGetUIntValue(&runner->config, item->data.v.s, &item->state);
-                }
-            }
-        }
-
-
 
 		enum GUIMenuExitReason reason = GUIShowMenu(&runner->params, &menu, &item);
         if (reason != GUI_MENU_EXIT_ACCEPT || GUIVariantIsVoid(item->data)) {
@@ -687,61 +836,9 @@ void mGUIShowBeiklive(struct mGUIRunner* runner) {
 
     
     // 读取配置数据
-	struct GUIMenuItem* item;
-	for (int i = 0; i < GUIMenuItemListSize(&menu.items); ++i) {
-		item = GUIMenuItemListGetPointer(&menu.items, i);
-		if (!item->validStates || GUIVariantIsVoid(item->data)) {
-			continue;
-		}
-		if (GUIVariantIsString(item->data)) {
-			if (item->stateMappings) {
-				size_t j;
-				for (j = 0; j < item->nStates; ++j) {
-					const struct GUIVariant* v = &item->stateMappings[j];
-					struct GUIVariant test;
-					switch (v->type) {
-					case GUI_VARIANT_VOID:
-						if (!mCoreConfigGetValue(&runner->config, item->data.v.s)) {
-							item->state = j;
-							break;
-						}
-						break;
-					case GUI_VARIANT_UNSIGNED:
-						if (mCoreConfigGetUIntValue(&runner->config, item->data.v.s, &test.v.u) && test.v.u == v->v.u) {
-							item->state = j;
-							break;
-						}
-						break;
-					case GUI_VARIANT_INT:
-						if (mCoreConfigGetIntValue(&runner->config, item->data.v.s, &test.v.i) && test.v.i == v->v.i) {
-							item->state = j;
-							break;
-						}
-						break;
-					case GUI_VARIANT_FLOAT:
-						if (mCoreConfigGetFloatValue(&runner->config, item->data.v.s, &test.v.f) && fabsf(test.v.f - v->v.f) <= 1e-3f) {
-							item->state = j;
-							break;
-						}
-						break;
-					case GUI_VARIANT_STRING:
-						test.v.s = mCoreConfigGetValue(&runner->config, item->data.v.s);
-						if (test.v.s && strcmp(test.v.s, v->v.s) == 0) {
-							item->state = j;
-							break;						
-						}
-						break;
-					case GUI_VARIANT_POINTER:
-						break;
-					}
-				}
-			} else {
-				mCoreConfigGetUIntValue(&runner->config, item->data.v.s, &item->state);
-			}
-		}
-	}
+	ReadStateConfig(&menu, runner);
 
-
+    struct GUIMenuItem* item;
 
 
 

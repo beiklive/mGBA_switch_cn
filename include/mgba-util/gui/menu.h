@@ -62,6 +62,7 @@ struct GUIMenuItem {
 	const char* const* validStates;
 	const struct GUIVariant* stateMappings;
 	unsigned nStates;
+	int id;
 	struct GUIMenu* submenu;
 	bool readonly;
 };

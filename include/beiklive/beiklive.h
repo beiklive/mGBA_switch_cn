@@ -1,6 +1,7 @@
 #ifndef BEIKLIVE_H
 #define BEIKLIVE_H
 
+#include <mgba-util/formatting.h>
 #include <mgba-util/gui/font.h>
 #include <mgba-util/memory.h>
 #include <mgba-util/png-io.h>
@@ -80,17 +81,22 @@ extern uint32_t g_bk_color_text;
 #define BK_META_MASK_GBA                        "BK.config.mask.gba" // gba遮罩的路径
 #define BK_META_MASK_GBC                        "BK.config.mask.gbc" // gbc遮罩的路径
 #define BK_META_PATH_BACKGROUND                 "BK.config.path.background" // 背景图片的路径
+#define BK_META_SHADER_NAME                    "BK.config.shader.name" // 滤镜索引
+
 
 // 数字类型
 #define BK_PRO_STATUS                           "BK.pro.status" // 程序当前状态（列表 菜单  游戏）
 #define BK_META_CONFIG_THEME                    "BK.config.theme" // 主题类型
 #define BK_META_ISFOLDER                        "BK.isFolderList" // 是否为文件列表
+#define BK_META_SHADER_ENABLE                   "BK.config.shader.enable" // 是否启用滤镜
 #define BK_META_MASK_ENABLE                     "BK.config.mask.enable" // 是否启用遮罩
 #define BK_META_MASK_STATUS_GBA                 "BK.config.mask.status.gba" // gba遮罩状态
 #define BK_META_MASK_STATUS_GBC                 "BK.config.mask.status.gbc" // gbc遮罩状态
 #define BK_META_PATH_BACKGROUND_ENABLE          "BK.config.path.background.enable" // 是否启用背景图片
 #define BK_META_TEXT_COLOR_TYPE                 "BK.text.color.type" // 文本颜色类型
 #define BK_META_HOVER_TEXT_COLOR_TYPE           "BK.hover.text.color.type" // 悬停文本颜色类型
+#define BK_META_SHADER_INDEX                    "BK.config.shader.index" // 滤镜索引
+
 
 // 程序当前状态（列表 菜单  游戏）
 enum BK_RUNNING_TYPE {
@@ -128,6 +134,7 @@ typedef struct {
 #define BK_BACKGROUND_BASE_PATH         "sdmc:/mGBA/backgrounds/"
 #define BK_OVERLAY_BASE_PATH            "sdmc:/mGBA/overlays/"
 #define BK_SHADER_BASE_PATH             "sdmc:/mGBA/shaders/"
+#define BK_SHADER_PATH                  "/mGBA/shaders/"
 #define BK_BACKGROUND_PATH              "/mGBA/backgrounds/"
 #define BK_OVERLAY_PATH                 "/mGBA/overlays/"
 #define BK_HOME_PATH                    "/"
@@ -221,11 +228,92 @@ void bk_init_mask_texture(const char* filepath, int maskType);
 int bk_init_menu_background(const char* filepath);
 
 // +++++++++++++++++++shader相关定义++++++++++++++++++++++++++++++
+union mBKGLES2UniformValue {
+	GLfloat f;
+	GLint i;
+	GLboolean b;
+	GLfloat fvec2[2];
+	GLfloat fvec3[3];
+	GLfloat fvec4[4];
+	GLint ivec2[2];
+	GLint ivec3[3];
+	GLint ivec4[4];
+	GLboolean bvec2[2];
+	GLboolean bvec3[3];
+	GLboolean bvec4[4];
+	GLfloat fmat2x2[4];
+	GLfloat fmat3x3[9];
+	GLfloat fmat4x4[16];
+};
+
+
+struct mBKGLES2Uniform {
+	const char* name;
+	GLenum type;
+	union mBKGLES2UniformValue value;
+	GLuint location;
+	union mBKGLES2UniformValue min;
+	union mBKGLES2UniformValue max;
+	const char* readableName;
+};
+
+struct mBKGLES2Shader {
+	int width;
+	int height;
+	bool integerScaling;
+	bool filter;
+	bool blend;
+	bool dirty;
+	GLuint tex;
+	GLuint fbo;
+	GLuint vao;
+	GLuint fragmentShader;
+	GLuint vertexShader;
+	GLuint program;
+	GLuint texLocation;
+	GLuint texSizeLocation;
+	GLuint positionLocation;
+
+	struct mBKGLES2Uniform* uniforms;
+	size_t nUniforms;
+};
+
+struct BKVideoShader {
+	const char* name;
+	const char* author;
+	const char* description;
+	void* preprocessShader;
+	void* passes;
+	size_t nPasses;
+};
+struct mBKGLES2UniformList {
+	struct mBKGLES2Uniform* vector;
+	size_t size;
+	size_t capacity;
+};
+
+void mBKGLES2ShaderDeinit(struct mBKGLES2Shader* shader);
+bool mBKGLES2ShaderLoad(struct BKVideoShader* shader, struct VDir* dir);
+void mBKGLES2ShaderInit(struct mBKGLES2Shader* shader, const char* vs, const char* fs, int width, int height, bool integerScaling, struct mBKGLES2Uniform* uniforms, size_t nUniforms);
 
 
 
 
+//保持读取出的shader的顺序，count通过遍历目录获取
+typedef struct {
+    struct BKVideoShader** shaders;
+    ssize_t count;
+} bk_shaderList_t;
+extern bk_shaderList_t* bk_global_shaders;
 
+// 获取目录下所有包含 manifest.ini 的子目录路径
+bool bk_shader_get_div_list(const char* path, char*** outList, ssize_t* outCount);
+
+void bk_shader_list_init(void);
+void bk_shader_list_deinit(void);
+
+int bk_shader_get_count(void);
+char** bk_shader_get_names(void);
 
 // ============================================ gles2 着色器参数结构体
 

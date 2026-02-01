@@ -329,6 +329,7 @@ void mGUIInit(struct mGUIRunner* runner, const char* port) {
 	mCoreConfigSetDefaultIntValue(&runner->config, BK_META_HOVER_TEXT_COLOR_TYPE, BK_CONFIG_COLOR_BLUE);
 	mCoreConfigSetDefaultIntValue(&runner->config, BK_META_ISFOLDER, true);
 	mCoreConfigSetDefaultIntValue(&runner->config, BK_META_MASK_ENABLE, false);
+	mCoreConfigSetDefaultIntValue(&runner->config, BK_META_SHADER_ENABLE, false);
 	mCoreConfigSetDefaultIntValue(&runner->config, BK_META_PATH_BACKGROUND_ENABLE, false);
 	mCoreConfigSetDefaultIntValue(&runner->config, BK_META_CONFIG_THEME, BK_THEME_DEFAULT);
 

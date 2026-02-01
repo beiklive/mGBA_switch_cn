@@ -1585,6 +1585,7 @@ int main(int argc, char* argv[]) {
 	mkdir(BK_CONFIG_BASE_PATH, 0755);
 	mkdir(BK_BACKGROUND_BASE_PATH, 0755);
 	mkdir(BK_OVERLAY_BASE_PATH, 0755);
+	mkdir(BK_SHADER_BASE_PATH, 0755);
 	if (!bk_config_init()) {
         printf("配置管理器初始化失败\n");
         return 1;
@@ -1625,6 +1626,12 @@ int main(int argc, char* argv[]) {
 	BK_GLOBAL_INT_GET(BK_META_HOVER_TEXT_COLOR_TYPE, hoverColorType);
 	BK_COLOR_TEXT_SELECT_SET(hoverColorType);
 
+	// 初始化滤镜
+	int isShaderEnabled = 0;
+	BK_GLOBAL_INT_GET(BK_META_SHADER_ENABLE, isShaderEnabled);
+	if(isShaderEnabled){
+		bk_shader_list_init();
+	}
 
 	
 	// ===================beiklive
@@ -1653,6 +1660,7 @@ int main(int argc, char* argv[]) {
 
 	glDeinit();
 	bk_opengl_deinit();
+	bk_shader_list_deinit();
 
 	hidTeardown();
 
