@@ -37,9 +37,20 @@ uint32_t g_bk_config_color[BK_CONFIG_COLOR_MAX] = {
 	BK_RGBA_YELLOW,
 	BK_RGBA_GRAY  
 };
+int g_game_width = 256;
+int g_game_height = 256;
+
+
 
 #define MAX_PASSES 8
 
+static const GLfloat bkQuadVerts[] = {
+    // x, y,      u, v
+    -1.f, -1.f,  0.f, 0.f,
+     1.f, -1.f,  1.f, 0.f,
+     1.f,  1.f,  1.f, 1.f,
+    -1.f,  1.f,  0.f, 1.f,
+};
 
 static const GLchar* const _gles2Header =
 	"#version 100\n"
@@ -1510,15 +1521,29 @@ void mBKGLES2ShaderInit(struct mBKGLES2Shader* shader, const char* vs, const cha
 
 	glGenTextures(1, &shader->tex);
 	glBindTexture(GL_TEXTURE_2D, shader->tex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, 256, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);		
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	if (shader->width > 0 && shader->height > 0) {
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, shader->width, shader->height, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
-	} else {
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 512, 512, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);		
-	}
+    // 创建VAO和VBO
+    glGenVertexArrays(1, &shader->vao);
+    glGenBuffers(1, &shader->vbo);
+    
+    glBindVertexArray(shader->vao);
+    glBindBuffer(GL_ARRAY_BUFFER, shader->vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(bkQuadVerts), bkQuadVerts, GL_STATIC_DRAW);
+    
+    // 配置顶点属性（位置）
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)0);
+    glEnableVertexAttribArray(0);
+    
+    // 配置纹理坐标属性
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)(2 * sizeof(GLfloat)));
+    glEnableVertexAttribArray(1);
+    
+    glBindVertexArray(0);  // 解绑VAO
+    glBindBuffer(GL_ARRAY_BUFFER, 0);  // 可选：解绑VBO
 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, shader->tex, 0);
 	shader->program = glCreateProgram();
@@ -1550,11 +1575,10 @@ void mBKGLES2ShaderInit(struct mBKGLES2Shader* shader, const char* vs, const cha
 	}
 	glShaderSource(shader->fragmentShader, 2, shaderBuffer, 0);
 
-	glAttachShader(shader->program, shader->vertexShader);
-	glAttachShader(shader->program, shader->fragmentShader);
-	char log[1024];
 	glCompileShader(shader->fragmentShader);
 	glCompileShader(shader->vertexShader);
+	glAttachShader(shader->program, shader->vertexShader);
+	glAttachShader(shader->program, shader->fragmentShader);
 	glLinkProgram(shader->program);
 
 	shader->texLocation = glGetUniformLocation(shader->program, "tex");
@@ -1565,19 +1589,7 @@ void mBKGLES2ShaderInit(struct mBKGLES2Shader* shader, const char* vs, const cha
 		shader->uniforms[i].location = glGetUniformLocation(shader->program, shader->uniforms[i].name);
 	}
 
-#ifdef BUILD_GLES3
-	const GLubyte* extensions = glGetString(GL_EXTENSIONS);
-	if (shaderBuffer[0] == _gles2Header || version[0] >= '3' || (extensions && strstr((const char*) extensions, "_vertex_array_object") != NULL)) {
-		glGenVertexArrays(1, &shader->vao);
-		glBindVertexArray(shader->vao);
-		glEnableVertexAttribArray(shader->positionLocation);
-		glVertexAttribPointer(shader->positionLocation, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-		glBindVertexArray(0);
-	} else
-#endif
-	{
-		shader->vao = -1;
-	}
+
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

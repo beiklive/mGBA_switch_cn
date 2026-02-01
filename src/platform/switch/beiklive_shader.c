@@ -1,7 +1,7 @@
 #include <beiklive/beiklive.h>
 
 bk_shaderList_t* bk_global_shaders = NULL;
-
+int bk_global_shader_index = 0;
 // 获取目录下所有包含 manifest.ini 的子目录路径
 // 参数为 shader 根目录路径     子目录路径数组  子目录个数
 
@@ -258,3 +258,143 @@ char** bk_shader_get_names(void)
     return names;
 }
 
+
+void ApplyUniform(struct mBKGLES2Uniform* u)
+{
+    if (!u || u->location == (GLuint)-1) {
+        return;
+    }
+
+    switch (u->type) {
+    case GL_FLOAT:
+        glUniform1f(u->location, u->value.f);
+        break;
+    case GL_INT:
+        glUniform1i(u->location, u->value.i);
+        break;
+    case GL_BOOL:
+        glUniform1i(u->location, u->value.b);
+        break;
+
+    case GL_FLOAT_VEC2:
+        glUniform2fv(u->location, 1, u->value.fvec2);
+        break;
+    case GL_FLOAT_VEC3:
+        glUniform3fv(u->location, 1, u->value.fvec3);
+        break;
+    case GL_FLOAT_VEC4:
+        glUniform4fv(u->location, 1, u->value.fvec4);
+        break;
+
+    case GL_INT_VEC2:
+        glUniform2iv(u->location, 1, u->value.ivec2);
+        break;
+    case GL_INT_VEC3:
+        glUniform3iv(u->location, 1, u->value.ivec3);
+        break;
+    case GL_INT_VEC4:
+        glUniform4iv(u->location, 1, u->value.ivec4);
+        break;
+
+    case GL_BOOL_VEC2:
+        glUniform2i(u->location, u->value.bvec2[0], u->value.bvec2[1]);
+        break;
+    case GL_BOOL_VEC3:
+        glUniform3i(u->location,
+            u->value.bvec3[0],
+            u->value.bvec3[1],
+            u->value.bvec3[2]);
+        break;
+    case GL_BOOL_VEC4:
+        glUniform4i(u->location,
+            u->value.bvec4[0],
+            u->value.bvec4[1],
+            u->value.bvec4[2],
+            u->value.bvec4[3]);
+        break;
+
+    case GL_FLOAT_MAT2:
+        glUniformMatrix2fv(u->location, 1, GL_FALSE, u->value.fmat2x2);
+        break;
+    case GL_FLOAT_MAT3:
+        glUniformMatrix3fv(u->location, 1, GL_FALSE, u->value.fmat3x3);
+        break;
+    case GL_FLOAT_MAT4:
+        glUniformMatrix4fv(u->location, 1, GL_FALSE, u->value.fmat4x4);
+        break;
+
+    default:
+        break;
+    }
+}
+
+
+
+void UniformValueToString(
+    const struct mBKGLES2Uniform* u,
+    char* out,
+    size_t outSize)
+{
+    if (!u || !out) return;
+
+    switch (u->type) {
+    case GL_FLOAT:
+        snprintf(out, outSize, "%.3f", u->value.f);
+        break;
+    case GL_INT:
+        snprintf(out, outSize, "%d", u->value.i);
+        break;
+    case GL_BOOL:
+        snprintf(out, outSize, "%s", u->value.b ? "true" : "false");
+        break;
+
+    case GL_FLOAT_VEC2:
+        snprintf(out, outSize, "(%.2f, %.2f)",
+            u->value.fvec2[0], u->value.fvec2[1]);
+        break;
+    case GL_FLOAT_VEC3:
+        snprintf(out, outSize, "(%.2f, %.2f, %.2f)",
+            u->value.fvec3[0],
+            u->value.fvec3[1],
+            u->value.fvec3[2]);
+        break;
+    case GL_FLOAT_VEC4:
+        snprintf(out, outSize, "(%.2f, %.2f, %.2f, %.2f)",
+            u->value.fvec4[0],
+            u->value.fvec4[1],
+            u->value.fvec4[2],
+            u->value.fvec4[3]);
+        break;
+
+    default:
+        snprintf(out, outSize, "N/A");
+        break;
+    }
+}
+
+
+
+void UniformMinMaxToString(
+    const struct mBKGLES2Uniform* u,
+    char* out,
+    size_t outSize)
+{
+    if (!u || !out) return;
+
+    switch (u->type) {
+    case GL_FLOAT:
+        snprintf(out, outSize, "[ %.3f - %.3f ]",
+                 u->min.f, u->max.f);
+        break;
+
+    case GL_INT:
+        snprintf(out, outSize, "[ %d - %d ]",
+                 u->min.i, u->max.i);
+        break;
+
+    default:
+        /* 其他类型一般没最小最大概念 */
+        snprintf(out, outSize, "");
+        break;
+    }
+}

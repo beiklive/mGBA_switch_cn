@@ -523,7 +523,9 @@ static void _drawTex(
 	glUniform1i(texLocation, 0);
 	
 	// 设置输出尺寸比例（用于顶点或片段着色器） 绘制区域大小（缩放和居中）
-	if(useFBO)
+	int isShaderEnabled = 0;
+	BK_GLOBAL_INT_GET(BK_META_SHADER_ENABLE, isShaderEnabled);
+	if(isShaderEnabled)
 	{
 		glUniform2f(dimsLocation, 1.0f, 1.0f);
 	}
@@ -841,7 +843,9 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 	} else if (!interframeBlending) {
 		glBindTexture(GL_TEXTURE_2D, tex);
 	}
-	if(!useFBO)
+	int isShaderEnabled = 0;
+	BK_GLOBAL_INT_GET(BK_META_SHADER_ENABLE, isShaderEnabled);
+	if(!isShaderEnabled)
 	{
 		glViewport(0, 1080 - vheight, vwidth, vheight);
 		// 如果启用帧间混合，先绘制淡化的前一帧，再绘制当前帧
@@ -1627,11 +1631,7 @@ int main(int argc, char* argv[]) {
 	BK_COLOR_TEXT_SELECT_SET(hoverColorType);
 
 	// 初始化滤镜
-	int isShaderEnabled = 0;
-	BK_GLOBAL_INT_GET(BK_META_SHADER_ENABLE, isShaderEnabled);
-	if(isShaderEnabled){
-		bk_shader_list_init();
-	}
+	bk_shader_list_init();
 
 	
 	// ===================beiklive

@@ -25,6 +25,9 @@
 #define BK_GBA_HEIGHT 160
 #define BK_GBC_WIDTH 160
 #define BK_GBC_HEIGHT 144
+
+extern int g_game_width;
+extern int g_game_height;
 // 主题相关偏移
 #define BK_TITLE_TOP_OFFSET 80
 #define BK_TITLE_BOTTOM_OFFSET 75
@@ -81,7 +84,7 @@ extern uint32_t g_bk_color_text;
 #define BK_META_MASK_GBA                        "BK.config.mask.gba" // gba遮罩的路径
 #define BK_META_MASK_GBC                        "BK.config.mask.gbc" // gbc遮罩的路径
 #define BK_META_PATH_BACKGROUND                 "BK.config.path.background" // 背景图片的路径
-#define BK_META_SHADER_NAME                    "BK.config.shader.name" // 滤镜索引
+#define BK_META_SHADER_NAME                     "BK.config.shader.name" // 滤镜索引
 
 
 // 数字类型
@@ -267,6 +270,7 @@ struct mBKGLES2Shader {
 	GLuint tex;
 	GLuint fbo;
 	GLuint vao;
+	GLuint vbo;
 	GLuint fragmentShader;
 	GLuint vertexShader;
 	GLuint program;
@@ -305,6 +309,7 @@ typedef struct {
     ssize_t count;
 } bk_shaderList_t;
 extern bk_shaderList_t* bk_global_shaders;
+extern int bk_global_shader_index;
 
 // 获取目录下所有包含 manifest.ini 的子目录路径
 bool bk_shader_get_div_list(const char* path, char*** outList, ssize_t* outCount);
@@ -315,6 +320,10 @@ void bk_shader_list_deinit(void);
 int bk_shader_get_count(void);
 char** bk_shader_get_names(void);
 
+
+void ApplyUniform(struct mBKGLES2Uniform* u);
+void UniformMinMaxToString(const struct mBKGLES2Uniform* u, char* out, size_t outSize);
+void UniformValueToString(const struct mBKGLES2Uniform* u, char* out, size_t outSize);
 // ============================================ gles2 着色器参数结构体
 
 

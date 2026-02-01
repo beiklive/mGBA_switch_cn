@@ -214,162 +214,70 @@ void bk_init_mask_texture(const char* filepath, int maskType){
 
 void bk_init_fbo(int width, int height)
 {
-static const GLchar* const _gles2Header =
-	"#version 100\n"
-	"precision mediump float;\n";
+    if(bk_global_shaders){
+        g_game_width = width;
+        g_game_height = height;
 
+        struct BKVideoShader* shader =
+            bk_global_shaders->shaders[bk_global_shader_index];
 
-// 顶点着色器：传递纹理坐标
-static const char* const _vertexShader =
-    "attribute vec4 position;\n"
-    "attribute vec2 texcoord;\n"
-    "varying vec2 texCoord;\n"
-    
-    "void main() {\n"
-    "   gl_Position = position;\n"
-    "   texCoord = texcoord;\n"
-    "}";
+        struct mBKGLES2Shader* passes =
+            (struct mBKGLES2Shader*)shader->passes;
 
-static const char* const _fragmentShaderCRT =
-    "varying vec2 texCoord;\n"
-    "uniform sampler2D tex;\n"
-    "uniform vec2 texSize;\n"
-    "vec4 scale2x(vec4 pixels[5], vec2 p) {\n"
-    "    p = fract(p);\n"
-    "	if (p.x > .5) {\n"
-    "		if (p.y > .5) {\n"
-    "			return pixels[0] == pixels[3] && pixels[0] != pixels[1] && pixels[3] != pixels[4] ? pixels[3] : pixels[2];\n"
-    "		} else {\n"
-    "			return pixels[4] == pixels[3] && pixels[1] != pixels[4] && pixels[0] != pixels[3] ? pixels[3] : pixels[2];\n"
-    "		}\n"
-    "	} else {\n"
-    "		if (p.y > .5) {\n"
-    "			return pixels[1] == pixels[0] && pixels[0] != pixels[3] && pixels[1] != pixels[4] ? pixels[1] : pixels[2];\n"
-    "		} else {\n"
-    "			return pixels[1] == pixels[4] && pixels[1] != pixels[0] && pixels[4] != pixels[3] ? pixels[1] : pixels[2];\n"
-    "		}\n"
-    "	}\n"
-    "}\n"
-    "vec4 scaleNeighborhood(vec2 p, vec2 x, vec2 o) {\n"
-    "	vec4 neighborhood[5];\n"
-    "    neighborhood[0] = texture2D(tex, texCoord + x + vec2( 0.0,  o.y));\n"
-    "    neighborhood[1] = texture2D(tex, texCoord + x + vec2(-o.x,  0.0));\n"
-    "    neighborhood[2] = texture2D(tex, texCoord + x + vec2( 0.0,  0.0));\n"
-    "    neighborhood[3] = texture2D(tex, texCoord + x + vec2( o.x,  0.0));\n"
-    "    neighborhood[4] = texture2D(tex, texCoord + x + vec2( 0.0, -o.y));\n"
-    "	return scale2x(neighborhood, p + x * texSize);\n"
-    "}\n"
-    "void main() {\n"
-    "    vec2 o = 1.0 / texSize;\n"
-    "    vec2 p = texCoord * texSize;\n"
-    "	vec4 pixels[5];\n"
-    "	pixels[0] = scaleNeighborhood(p, vec2(       0.0,  o.y / 2.0), o);\n"
-    "	pixels[1] = scaleNeighborhood(p, vec2(-o.x / 2.0,        0.0), o);\n"
-    "	pixels[2] = scaleNeighborhood(p, vec2(       0.0,        0.0), o);\n"
-    "	pixels[3] = scaleNeighborhood(p, vec2( o.x / 2.0,        0.0), o);\n"
-    "	pixels[4] = scaleNeighborhood(p, vec2(       0.0, -o.y / 2.0), o);\n"
-    "	gl_FragColor = scale2x(pixels, p * 2.0);\n"
-    "}\n";
+        struct mBKGLES2Shader* pass0 = &passes[0];
 
+        glBindTexture(GL_TEXTURE_2D, pass0->tex);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
+                    width, height,
+                    0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 
-
-    bkShaderProgram = glCreateProgram();
-
-    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-
-    const GLchar* shaderBuffer[2];
-    shaderBuffer[0] = _gles2Header;
-    shaderBuffer[1] = _vertexShader;
-
-    glShaderSource(vertexShader, 2, shaderBuffer, NULL);
-    glCompileShader(vertexShader);
-
-    shaderBuffer[1] = _fragmentShaderCRT;  // 改为CRT着色器
-    glShaderSource(fragmentShader, 2, shaderBuffer, NULL);
-    glCompileShader(fragmentShader);
-
-    glAttachShader(bkShaderProgram, vertexShader);
-    glAttachShader(bkShaderProgram, fragmentShader);
-    glLinkProgram(bkShaderProgram);
-
-
-    glGenVertexArrays(1, &bkfboVao);
-    glGenBuffers(1, &bkfboVbo);
-
-    glBindVertexArray(bkfboVao);
-    glBindBuffer(GL_ARRAY_BUFFER, bkfboVbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(bkQuadVerts), bkQuadVerts, GL_STATIC_DRAW);
-    GLint posLoc = glGetAttribLocation(bkShaderProgram, "position");
-    GLint uvLoc  = glGetAttribLocation(bkShaderProgram, "texcoord");
-    glEnableVertexAttribArray(posLoc);
-    glVertexAttribPointer(posLoc, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)0);
-
-    glEnableVertexAttribArray(uvLoc);
-    glVertexAttribPointer(uvLoc, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)(2 * sizeof(GLfloat)));
-
-    glBindVertexArray(0);
-
-
-
-    glGenFramebuffers(1, &bkfbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, bkfbo);
-    glGenTextures(1, &bkfboTex);
-    glBindTexture(GL_TEXTURE_2D, bkfboTex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    glFramebufferTexture2D(
-        GL_FRAMEBUFFER,
-        GL_COLOR_ATTACHMENT0,
-        GL_TEXTURE_2D,
-        bkfboTex,
-        0
-    );
-    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-    if (status != GL_FRAMEBUFFER_COMPLETE) {
-        printf("FBO incomplete: 0x%x\n", status);
+        glBindTexture(GL_TEXTURE_2D, 0);
     }
-
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-
 }
+
 void bk_switch_to_fbo(bool enable)
 {
-    if(enable)
-    {
-        glBindFramebuffer(GL_FRAMEBUFFER, bkfbo);
-        glClearColor(0,0,0,1);
-        glClear(GL_COLOR_BUFFER_BIT);
-    }
-    else
-    {
+    
+    if (enable) {
+        if(bk_global_shaders){
+            struct BKVideoShader* shader =
+                bk_global_shaders->shaders[bk_global_shader_index];
+        
+            struct mBKGLES2Shader* passes =
+                (struct mBKGLES2Shader*)shader->passes;
+        
+            struct mBKGLES2Shader* pass0 = &passes[0];
+            glBindFramebuffer(GL_FRAMEBUFFER, pass0->fbo);
+            glClearColor(0, 0, 0, 1);
+            glClear(GL_COLOR_BUFFER_BIT);
+    
+        }
+    } else {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 }
 
 void bk_render_fbo(GLuint *texture, int width, int height)
 {
-    glUseProgram(bkShaderProgram);
-    glBindVertexArray(bkfboVao);
+    struct BKVideoShader* shader =
+    bk_global_shaders->shaders[bk_global_shader_index];
 
+    struct mBKGLES2Shader* passes =
+        (struct mBKGLES2Shader*)shader->passes;
+
+    struct mBKGLES2Shader* pass0 = &passes[0];
+    glUseProgram(pass0->program);
+    glBindVertexArray(pass0->vao);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, *texture);
-
+    glBindTexture(GL_TEXTURE_2D, pass0->tex);
     glTexParameteri(
 		GL_TEXTURE_2D,
 		GL_TEXTURE_MAG_FILTER,
 		GL_NEAREST
 	);
 
-    glUniform1i(glGetUniformLocation(bkShaderProgram, "tex"), 0);
-
-    
-    glUniform2f(glGetUniformLocation(bkShaderProgram, "texSize"), (float)width, (float)height);
+    glUniform1i(pass0->texLocation, 0);
+    glUniform2f(pass0->texSizeLocation, (float)width, (float)height);
 
     // 使用三角扇绘制一个矩形（四个顶点）
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);

@@ -91,107 +91,59 @@ static void ReadStateConfig(struct GUIMenu *menu, struct mGUIRunner* runner) {
 
 void mGUIUniformSet(struct mGUIRunner* runner, int ShaderIndex)
 {
-    if (ShaderIndex == 0) {
+    if (!runner || ShaderIndex <= 0) {
         return;
     }
-    struct BKVideoShader* shader = bk_global_shaders->shaders[ShaderIndex - 1];
+
+    struct BKVideoShader* shader =
+        bk_global_shaders->shaders[ShaderIndex - 1];
     if (!shader) {
         return;
     }
-    const char* name = shader->name;
-    const char* author = shader->author;
-    const char* description = shader->description;
 
     struct GUIMenu menu = {
-		.title = name,
-        .subtitle = author,
+        .title = "滤镜参数设置(有需要再改)",
+        .subtitle = shader->name,
         .background = &runner->background.d,
-		.index = 0
-	};
+        .index = 0
+    };
     GUIMenuItemListInit(&menu.items, 0);
-    for (size_t i = 0; i < shader->nPasses; i++) {
-        struct mBKGLES2Shader* pass = &shader->passes[i];
-        if (pass->uniforms) {
-            for (size_t j = 0; j < pass->nUniforms; j++) {
-                const char* readableName = pass->uniforms[j].readableName;
-                size_t u;
-                for (u = 0; u < pass->nUniforms; ++u) {
-                    struct mBKGLES2Uniform* uniform = &pass->uniforms[u];
-                    switch (uniform->type) {
-                    case GL_FLOAT:
-                        glUniform1f(uniform->location, uniform->value.f);
-                        // 拼接为字符串
-                        char str[100];
-                        sprintf(str, "%s [%f - %f]", readableName, uniform->min.f, uniform->max.f);
-                        *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-                            .title = str,
-                            .data = GUI_V_U(u | BK_CONFIG_UNIFORM << 16),
-                            .leftText = "默认值",
-                        };
-                        break;
-                    // case GL_INT:
-                    //     glUniform1i(uniform->location, uniform->value.i);
-                    //     break;
-                    // case GL_BOOL:
-                    //     glUniform1i(uniform->location, uniform->value.b);
-                    //     break;
-                    // case GL_FLOAT_VEC2:
-                    //     glUniform2fv(uniform->location, 1, uniform->value.fvec2);
-                    //     break;
-                    // case GL_FLOAT_VEC3:
-                    //     glUniform3fv(uniform->location, 1, uniform->value.fvec3);
-                    //     break;
-                    // case GL_FLOAT_VEC4:
-                    //     glUniform4fv(uniform->location, 1, uniform->value.fvec4);
-                    //     break;
-                    // case GL_INT_VEC2:
-                    //     glUniform2iv(uniform->location, 1, uniform->value.ivec2);
-                    //     break;
-                    // case GL_INT_VEC3:
-                    //     glUniform3iv(uniform->location, 1, uniform->value.ivec3);
-                    //     break;
-                    // case GL_INT_VEC4:
-                    //     glUniform4iv(uniform->location, 1, uniform->value.ivec4);
-                    //     break;
-                    // case GL_BOOL_VEC2:
-                    //     glUniform2i(uniform->location, uniform->value.bvec2[0], uniform->value.bvec2[1]);
-                    //     break;
-                    // case GL_BOOL_VEC3:
-                    //     glUniform3i(uniform->location, uniform->value.bvec3[0], uniform->value.bvec3[1], uniform->value.bvec3[2]);
-                    //     break;
-                    // case GL_BOOL_VEC4:
-                    //     glUniform4i(uniform->location, uniform->value.bvec4[0], uniform->value.bvec4[1], uniform->value.bvec4[2], uniform->value.bvec4[3]);
-                    //     break;
-                    // case GL_FLOAT_MAT2:
-                    //     glUniformMatrix2fv(uniform->location, 1, GL_FALSE, uniform->value.fmat2x2);
-                    //     break;
-                    // case GL_FLOAT_MAT3:
-                    //     glUniformMatrix3fv(uniform->location, 1, GL_FALSE, uniform->value.fmat3x3);
-                    //     break;
-                    // case GL_FLOAT_MAT4:
-                    //     glUniformMatrix4fv(uniform->location, 1, GL_FALSE, uniform->value.fmat4x4);
-                    //     break;
-                        default:
-                            break;
-                    }
-                }
 
+    /* passes 实际是 mBKGLES2Shader 数组 */
+    struct mBKGLES2Shader* passes = (struct mBKGLES2Shader*)shader->passes;
 
-
-                *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-                    .title = "是否启用滤镜功能",
-                    .data = GUI_V_S(BK_META_SHADER_ENABLE),
-                    .submenu = 0,
-                    .state = 0,
-                    .validStates = (const char*[]) {
-                        "不启用", "启用"
-                    },
-                    .nStates = 2
-                };
-            }
+    for (size_t p = 0; p < shader->nPasses; ++p) {
+        struct mBKGLES2Shader* pass = &passes[p];
+        if (!pass->uniforms || pass->nUniforms == 0) {
+            continue;
         }
 
+        for (size_t u = 0; u < pass->nUniforms; ++u) {
+            struct mBKGLES2Uniform* uniform = &pass->uniforms[u];
+
+            /* 先把值同步到 GPU */
+            ApplyUniform(uniform);
+
+            /* title / leftText 需要持久内存 */
+            char* title = malloc(128);
+            char* valueStr = malloc(64);
+
+            const char* name =
+                uniform->readableName ?
+                uniform->readableName :
+                uniform->name;
+
+            snprintf(title, 128, "%s", name);
+            UniformValueToString(uniform, valueStr, 64);
+
+            *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+                .title = title,
+                .leftText = valueStr,
+                .data = GUI_V_U(BK_CONFIG_UNIFORM | (u << 16)),
+            };
+        }
     }
+
     *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
         .title = "保存设置",
         .data = GUI_V_U(BK_CONFIG_SAVE),
@@ -263,7 +215,7 @@ void mGUIShaderSet(struct mGUIRunner* runner)
     };
     
     *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-        .title = "修改滤镜参数",
+        .title = "滤镜参数设置(有需要再改)",
         .data = GUI_V_U(BK_CONFIG_STATUS_1),
     };
 
@@ -294,6 +246,13 @@ void mGUIShaderSet(struct mGUIRunner* runner)
 				if (!item->validStates || !GUIVariantIsString(item->data)) {
 					continue;
 				}
+                // 保存滤镜配置
+                if(item->id == 4616)
+                {
+                    mCoreConfigSetValue(&runner->config, BK_META_SHADER_NAME, bk_global_shaders->shaders[item->state - 1]->name);
+                    bk_global_shader_index = item->state - 1;
+                }
+
                 if (item->stateMappings) {
 					const struct GUIVariant* v = &item->stateMappings[item->state];
 					switch (v->type) {
@@ -323,6 +282,7 @@ void mGUIShaderSet(struct mGUIRunner* runner)
             }
             mCoreConfigSave(&runner->config);
 			mCoreLoadForeignConfig(runner->core, &runner->config);
+            bk_init_fbo(g_game_width, g_game_height);
             GUIShowMessageBox(&runner->params, GUI_MESSAGE_BOX_OK, 240, "保存完成!");
             break;
         }
