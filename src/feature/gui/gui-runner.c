@@ -853,6 +853,9 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 		mCoreConfigGetIntValue(&runner->config, "showOSD", &showOSD);
 		mCoreConfigGetIntValue(&runner->config, "mute", &mute);
 		mCoreConfigGetIntValue(&runner->config, "fastForwardMute", &fastForwardMute);
+
+
+
 #ifdef M_CORE_GB
 		if (runner->core->platform(runner->core) == mPLATFORM_GB) {
 			runner->core->reloadConfigOption(runner->core, "gb.pal", &runner->config);

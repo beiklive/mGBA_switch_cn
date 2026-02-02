@@ -83,13 +83,14 @@ static const char* const _fragmentShader =
 	"varying vec2 texCoord;\n"     // 接收顶点纹理坐标
 	"uniform sampler2D tex;\n"     // 游戏画面纹理
 	"uniform vec4 color;\n"        // 颜色调制
+	"uniform float Brightness;\n"
 
 	"void main() {\n"
-	// 从纹理采样并转换为RGB
-	"	vec4 texColor = vec4(texture2D(tex, texCoord).rgb, 1.0);\n"
-	// 应用颜色调制
-	"	texColor *= color;\n"
-	"	gl_FragColor = texColor;\n"
+	"    vec4 adjustedColor = texture2D(tex, texCoord);\n"
+	"    adjustedColor.rgb *= vec3(1.0, 1.0, 1.0) * Brightness;\n"
+	"    vec4 texColor = vec4(adjustedColor.rgb, 1.0);\n"
+	"    texColor *= color;\n"
+	"    gl_FragColor = texColor;\n"
 	"}";
 
 // OpenGL相关的全局变量
@@ -102,6 +103,7 @@ static GLuint texLocation;         // 纹理uniform位置
 static GLuint dimsLocation;        // 尺寸uniform位置
 static GLuint insizeLocation;      // 输入大小uniform位置
 static GLuint colorLocation;       // 颜色uniform位置
+static GLuint brightnessLocation;  // 亮度uniform位置
 static GLuint tex;                 // 当前游戏画面纹理
 static GLuint oldTex;              // 前一帧的游戏画面纹理（用于帧混合）
 
@@ -448,6 +450,28 @@ static void _gameLoaded(struct mGUIRunner* runner) {
 		}
 	}
 
+	// 读取亮度值和屏幕
+	int maxBrightness = 5;
+	if (mCoreConfigGetIntValue(&runner->config, BK_META_SCREEN_BRIGHTNESS, &maxBrightness)) {
+		g_cur_screen_brightness = bk_mapNumberToBrightness(maxBrightness);
+		printf("max brightness: %d g_cur_screen_brightness: %.1f\n", maxBrightness, g_cur_screen_brightness);
+	}
+	int maxAspectRatio = 1;
+	if (runner->core->platform(runner->core) == mPLATFORM_GBA)
+	{
+		if (mCoreConfigGetIntValue(&runner->config, BK_META_GBA_ASPECT_RATIO, &maxAspectRatio)) {
+			g_cur_screen_aspect_ratio = maxAspectRatio;
+		}
+	}
+	else
+	{
+		if (mCoreConfigGetIntValue(&runner->config, BK_META_GBC_ASPECT_RATIO, &maxAspectRatio)) {
+			g_cur_screen_aspect_ratio = maxAspectRatio;
+		}
+	}
+	printf("max aspect ratio: %d\n", g_cur_screen_aspect_ratio);
+
+
 	// 处理GPU加速配置更改
 	if (runner->core->supportsFeature(runner->core, mCORE_FEATURE_OPENGL)) {
 		if (mCoreConfigGetIntValue(&runner->config, "hwaccelVideo", &fakeBool) && fakeBool == usePbo) {
@@ -521,6 +545,8 @@ static void _drawTex(
 	
 	// 设置纹理采样单元（使用 0 号纹理）
 	glUniform1i(texLocation, 0);
+
+	glUniform1f(brightnessLocation, g_cur_screen_brightness);
 	
 	// 设置输出尺寸比例（用于顶点或片段着色器） 绘制区域大小（缩放和居中）
 	int isShaderEnabled = 0;
@@ -544,12 +570,12 @@ static void _drawTex(
 		case SM_PA:
 			// 像素精确模式（Pixel Accurate）
 			// 选择整数倍缩放，避免像素失真
-			if (aspectX > aspectY) {
-				max = floor(1.f / aspectX);
-			} else {
-				max = floor(1.f / aspectY);
-			}
-	
+			// if (aspectX > aspectY) {
+			// 	max = floor(1.f / aspectX);
+			// } else {
+			// 	max = floor(1.f / aspectY);
+			// }
+			max = (float)g_cur_screen_aspect_ratio;
 			// 如果可用缩放倍数 >= 1，直接使用
 			if (max >= 1.f) {
 				break;
@@ -583,16 +609,16 @@ static void _drawTex(
 			aspectY = height / (float) vheight;
 		}
 	
-		if (SM_PA == screenMode)
-		{
-			if(runner->core->platform(runner->core) == mPLATFORM_GB)
-			{
-				// GB/GBC 的像素精确模式 适配部分滤镜
-				aspectX = 1120.0f/1920.0f;
-				aspectY = 1008.0f/1080.0f;
-				max = 1.0f;
-			}
-		}
+		// if (SM_PA == screenMode)
+		// {
+		// 	if(runner->core->platform(runner->core) == mPLATFORM_GB)
+		// 	{
+		// 		// GB/GBC 的像素精确模式 适配部分滤镜
+		// 		aspectX = 1120.0f/1920.0f;
+		// 		aspectY = 1008.0f/1080.0f;
+		// 		max = 1.0f;
+		// 	}
+		// }
 		// 应用最终缩放因子
 		aspectX *= max;
 		aspectY *= max;
@@ -879,11 +905,7 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 		float max = 1.f;
 		switch (screenMode) {
 		case SM_PA:
-			if (aspectX > aspectY) {
-				max = floor(1.f / (float) aspectX);
-			} else {
-				max = floor(1.f / (float) aspectY);
-			}
+			max = (float)g_cur_screen_aspect_ratio;
 			if (max >= 1.f) {
 				break;
 			}
@@ -904,15 +926,15 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 			aspectY = height / (float) vheight;
 		}
 
-		if (SM_PA == screenMode)
-		{
-			if(runner->core->platform(runner->core) == mPLATFORM_GB)
-			{
-				aspectX = 1120.0f/1920.0f;
-				aspectY = 1008.0f/1080.0f;
-				max = 1.0f;
-			}
-		}
+		// if (SM_PA == screenMode)
+		// {
+		// 	if(runner->core->platform(runner->core) == mPLATFORM_GB)
+		// 	{
+		// 		aspectX = 1120.0f/1920.0f;
+		// 		aspectY = 1008.0f/1080.0f;
+		// 		max = 1.0f;
+		// 	}
+		// }
 		aspectX *= max;
 		aspectY *= max;
 		unsigned renderWidth = (unsigned) (aspectX * vwidth);
@@ -1004,6 +1026,8 @@ static bool _running(struct mGUIRunner* runner) {
 			vheight = 720;
 		}
 		nwindowSetCrop(nwindowGetDefault(), 0, 0, vwidth, vheight);
+		g_view_width = vwidth;
+		g_view_height = vheight;
 		vmode = newMode;
 	}
 
@@ -1252,6 +1276,7 @@ static void glInit(void) {
 	colorLocation = glGetUniformLocation(program, "color");
 	dimsLocation = glGetUniformLocation(program, "dims");
 	insizeLocation = glGetUniformLocation(program, "insize");
+	brightnessLocation = glGetUniformLocation(program, "Brightness");
 	GLuint offsetLocation = glGetAttribLocation(program, "offset");
 
 	// 创建顶点缓冲和数组对象
@@ -1352,7 +1377,8 @@ int main(int argc, char* argv[]) {
 		vheight = 720;
 	}
 	nwindowSetCrop(window, 0, 0, vwidth, vheight);
-
+	g_view_width = vwidth;
+	g_view_height = vheight;
 	// 初始化OpenGL和手柄
 	glInit();
 
@@ -1437,8 +1463,8 @@ int main(int argc, char* argv[]) {
 				.submenu = 0,
 				.state = SM_PA,
 				.validStates = (const char*[]) {
-					"精确像素(Pixel-Accurate)",
-					"按比例填充(Aspect-Ratio Fit)",
+					"整数缩放(Pixel-Accurate)",
+					"按比例填充屏幕(Aspect-Ratio Fit)",
 					"全屏拉伸(Stretched)",
 				},
 				.nStates = 3

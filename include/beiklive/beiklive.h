@@ -29,6 +29,13 @@
 
 extern int g_game_width;
 extern int g_game_height;
+
+extern int g_view_width;
+extern int g_view_height;
+
+extern int g_cur_screen_aspect_ratio;
+extern float g_cur_screen_brightness;
+
 // 主题相关偏移
 #define BK_TITLE_TOP_OFFSET 80
 #define BK_TITLE_BOTTOM_OFFSET 75
@@ -100,6 +107,9 @@ extern uint32_t g_bk_color_text;
 #define BK_META_TEXT_COLOR_TYPE                 "BK.text.color.type" // 文本颜色类型
 #define BK_META_HOVER_TEXT_COLOR_TYPE           "BK.hover.text.color.type" // 悬停文本颜色类型
 #define BK_META_SHADER_INDEX                    "BK.config.shader.index" // 滤镜索引
+#define BK_META_SCREEN_BRIGHTNESS               "BK.config.screen.brightness"
+#define BK_META_GBA_ASPECT_RATIO                "BK.config.gba.aspectRatio"
+#define BK_META_GBC_ASPECT_RATIO                "BK.config.gbc.aspectRatio"
 
 
 // 程序当前状态（列表 菜单  游戏）
@@ -186,7 +196,8 @@ char* bk_config_export_to_string(void);
 bool bk_config_import_from_string(const char* config_str);
 const bk_config_item_t* bk_config_get_internal_cache(void);
 uint32_t bk_util_normalize_cn_symbol(uint32_t u);
-
+int bk_getMaxAspectRatio(void);
+float bk_mapNumberToBrightness(int num);
 // ============ 文件名处理函数 ============
 bool bk_util_has_mgba_dir_prefix(const char* str);
 char* bk_util_remove_trailing_slash_copy(const char* str);
@@ -335,24 +346,6 @@ void UniformValueToString(const struct mBKGLES2Uniform* u, char* out, size_t out
 
 
 // ============================================fbo相关定义
-
-typedef struct {
-	GLuint texture; // 纹理
-	GLuint fbo; // 绘制到fbo的纹理
-	GLuint program; // 着色器程序
-	int width; // FBO宽度
-	int height; // FBO高度
-	bool is_enable; // 当前是否绑定
-} bk_FrameBufferObject_t;
-
-extern GLuint bkfbo;
-extern GLuint bkfboTex;
-
-extern GLuint bkfboVao;
-extern GLuint bkfboVbo;
-
-extern GLuint bkShaderProgram;
-
 extern bool useFBO;
 
 void bk_init_fbo(int width, int height);

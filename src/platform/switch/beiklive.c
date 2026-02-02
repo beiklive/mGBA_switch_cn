@@ -40,8 +40,11 @@ uint32_t g_bk_config_color[BK_CONFIG_COLOR_MAX] = {
 int g_game_width = 256;
 int g_game_height = 256;
 
+int g_view_width = 1280;
+int g_view_height = 720;
 
-
+int g_cur_screen_aspect_ratio = 3;
+float g_cur_screen_brightness = 1.0f;
 #define MAX_PASSES 8
 
 static const GLfloat bkQuadVerts[] = {
@@ -1748,4 +1751,26 @@ void mBKGLES2ShaderDeinit(struct mBKGLES2Shader* shader) {
 		glDeleteVertexArrays(1, &shader->vao);
 	}
 #endif
+}
+
+
+
+int bk_getMaxAspectRatio(void)
+{
+	float aspectX = g_view_width / (float) g_game_width;
+	float aspectY = g_view_height / (float) g_game_height;
+	int max = 1;
+	if (aspectX > aspectY) {
+		max = floor(aspectY);
+	} else {
+		max = floor(aspectX);
+	}
+	return max;
+}
+
+float bk_mapNumberToBrightness(int num) {
+    if (num < 1) num = 1;
+    if (num > 9) num = 9;
+    
+    return 0.2f * num;
 }

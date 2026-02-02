@@ -11,11 +11,6 @@ GLuint bkcolorLocation;       // 颜色uniform位置
 GLuint bkvbo;                 // 顶点缓冲对象
 GLuint bkvao;                 // 顶点数组对象
 
-GLuint bkfbo; 
-GLuint bkfboVao; 
-GLuint bkfboVbo; 
-GLuint bkfboTex;
-GLuint bkShaderProgram;
 bool useFBO = true;
 
 static const GLfloat bkQuadVerts[] = {
@@ -214,31 +209,8 @@ void bk_init_mask_texture(const char* filepath, int maskType){
 
 void bk_init_fbo(int width, int height)
 {
-    if(bk_global_shaders && bk_global_shader_index >= 0){
-        g_game_width = width;
-        g_game_height = height;
-
-        // struct BKVideoShader* shader =
-        //     bk_global_shaders->shaders[bk_global_shader_index];
-
-        // struct mBKGLES2Shader* passes =
-        //     (struct mBKGLES2Shader*)shader->passes;
-
-        // struct mBKGLES2Shader* pass0 = &passes[0];
-
-        // glBindFramebuffer(GL_FRAMEBUFFER, pass0->fbo);
-        // glBindTexture(GL_TEXTURE_2D, pass0->tex);
-        // glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-        
-        // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-            
-        // glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pass0->tex, 0);
-        // glBindTexture(GL_TEXTURE_2D, 0);
-        // glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    }
+    g_game_width = width;
+    g_game_height = height;
 }
 
 void bk_switch_to_fbo(struct mGUIRunner* runner, bool enable)
