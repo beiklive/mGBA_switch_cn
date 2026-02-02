@@ -156,7 +156,7 @@ void bk_shader_list_init(void)
             continue;
         }
 
-        struct VDir* dir = VDirOpen(shaderList[i]);
+        struct VDir* dir = VDirOpen(shaderList[i]); 
         if (!dir) {
             free(shader);
             continue;

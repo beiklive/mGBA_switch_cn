@@ -886,7 +886,7 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 	}
 	else
 	{
-		bk_switch_to_fbo(runner, true);
+		bk_switch_to_fbo(runner, true, 0);
 		glViewport(0, 0, width, height);
 		// 如果启用帧间混合，先绘制淡化的前一帧，再绘制当前帧
 		if (interframeBlending) {
@@ -898,7 +898,7 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 			_drawTex(runner, width, height, faded, false);
 		}
 	
-		bk_switch_to_fbo(runner, false);
+		bk_switch_to_fbo(runner, false, 0);
 
 		float aspectX = width / (float) vwidth;
 		float aspectY = height / (float) vheight;
@@ -925,24 +925,10 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 			aspectX = width / (float) vwidth;
 			aspectY = height / (float) vheight;
 		}
-
-		// if (SM_PA == screenMode)
-		// {
-		// 	if(runner->core->platform(runner->core) == mPLATFORM_GB)
-		// 	{
-		// 		aspectX = 1120.0f/1920.0f;
-		// 		aspectY = 1008.0f/1080.0f;
-		// 		max = 1.0f;
-		// 	}
-		// }
 		aspectX *= max;
 		aspectY *= max;
-		unsigned renderWidth = (unsigned) (aspectX * vwidth);
-		unsigned renderHeight = (unsigned) (aspectY * vheight);
-		unsigned renderX = (vwidth - renderWidth) / 2;
-		unsigned renderY = (vheight - renderHeight) / 2;
-		glViewport(renderX, 1080 - vheight + renderY, renderWidth, renderHeight);
-		bk_render_fbo(runner, width, height);
+
+		bk_render_fbo(runner, width, height, aspectX, aspectY);
 	}
 	glViewport(
 		0,

@@ -349,7 +349,7 @@ void UniformValueToString(const struct mBKGLES2Uniform* u, char* out, size_t out
 extern bool useFBO;
 
 void bk_init_fbo(int width, int height);
-void bk_switch_to_fbo(struct mGUIRunner* runner, bool enable);
-void bk_render_fbo(struct mGUIRunner* runner, int width, int height);
+void bk_switch_to_fbo(struct mGUIRunner* runner, bool enable, int passIndex);
+void bk_render_fbo(struct mGUIRunner* runner, int width, int height, float aspectX, float aspectY);
 
 #endif

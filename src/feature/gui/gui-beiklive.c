@@ -133,7 +133,7 @@ void mGUIScreenSet(struct mGUIRunner* runner) {
     }
     else
     {
-        *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) { .title = "画面放大倍数",
+        *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) { .title = "画面放大倍数(仅整数缩放生效)",
                                                                      .data = GUI_V_S(BK_META_GBC_ASPECT_RATIO),
                                                                      .submenu = 0,
                                                                      .state = max - 1,
@@ -232,7 +232,6 @@ void mGUIUniformSet(struct mGUIRunner* runner, int ShaderIndex) {
 	};
 	GUIMenuItemListInit(&menu.items, 0);
 
-	/* passes 实际是 mBKGLES2Shader 数组 */
 	struct mBKGLES2Shader* passes = (struct mBKGLES2Shader*) shader->passes;
 
 	for (size_t p = 0; p < shader->nPasses; ++p) {
@@ -243,16 +242,10 @@ void mGUIUniformSet(struct mGUIRunner* runner, int ShaderIndex) {
 
 		for (size_t u = 0; u < pass->nUniforms; ++u) {
 			struct mBKGLES2Uniform* uniform = &pass->uniforms[u];
-
-			/* 先把值同步到 GPU */
 			ApplyUniform(uniform);
-
-			/* title / leftText 需要持久内存 */
 			char* title = malloc(128);
 			char* valueStr = malloc(64);
-
 			const char* name = uniform->readableName ? uniform->readableName : uniform->name;
-
 			snprintf(title, 128, "%s", name);
 			UniformValueToString(uniform, valueStr, 64);
 
