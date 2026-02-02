@@ -253,8 +253,14 @@ void mGUIShaderSet(struct mGUIRunner* runner)
                 // 保存滤镜配置
                 if(item->id == 4616)
                 {
-                    mCoreConfigSetValue(&runner->config, BK_META_SHADER_NAME, bk_global_shaders->shaders[item->state - 1]->name);
-                    bk_global_shader_index = item->state - 1;
+                    if(item->state == 0)
+                    {
+                        mCoreConfigSetValue(&runner->config, BK_META_SHADER_NAME, "no");
+                        bk_global_shader_index = -1;
+                    }else{
+                        mCoreConfigSetValue(&runner->config, BK_META_SHADER_NAME, bk_global_shaders->shaders[item->state - 1]->name);
+                        bk_global_shader_index = item->state - 1;
+                    }
                 }
 
                 if (item->stateMappings) {

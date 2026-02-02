@@ -1516,16 +1516,33 @@ void mBKGLES2ShaderInit(struct mBKGLES2Shader* shader, const char* vs, const cha
 	shader->dirty = true;
 	shader->uniforms = uniforms;
 	shader->nUniforms = nUniforms;
-	glGenFramebuffers(1, &shader->fbo);
-	glBindFramebuffer(GL_FRAMEBUFFER, shader->fbo);
-
-	glGenTextures(1, &shader->tex);
-	glBindTexture(GL_TEXTURE_2D, shader->tex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, 256, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);		
+	
+	// GBA framebuffer texture
+	glGenFramebuffers(1, &shader->gba_fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, shader->gba_fbo);
+	glGenTextures(1, &shader->gba_tex);
+	glBindTexture(GL_TEXTURE_2D, shader->gba_tex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, BK_GBA_WIDTH, BK_GBA_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);		
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, shader->gba_tex, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	// GBC framebuffer texture
+	glGenFramebuffers(1, &shader->gbc_fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, shader->gbc_fbo);
+	glGenTextures(1, &shader->gbc_tex);
+	glBindTexture(GL_TEXTURE_2D, shader->gbc_tex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, BK_GBC_WIDTH, BK_GBC_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);		
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, shader->gbc_tex, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
     // 创建VAO和VBO
     glGenVertexArrays(1, &shader->vao);
     glGenBuffers(1, &shader->vbo);
@@ -1545,7 +1562,6 @@ void mBKGLES2ShaderInit(struct mBKGLES2Shader* shader, const char* vs, const cha
     glBindVertexArray(0);  // 解绑VAO
     glBindBuffer(GL_ARRAY_BUFFER, 0);  // 可选：解绑VBO
 
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, shader->tex, 0);
 	shader->program = glCreateProgram();
 	shader->vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	shader->fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
@@ -1591,7 +1607,6 @@ void mBKGLES2ShaderInit(struct mBKGLES2Shader* shader, const char* vs, const cha
 
 
 
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 bool mBKGLES2ShaderLoad(struct BKVideoShader* shader, struct VDir* dir) {
@@ -1722,10 +1737,12 @@ bool mBKGLES2ShaderLoad(struct BKVideoShader* shader, struct VDir* dir) {
 }
 
 void mBKGLES2ShaderDeinit(struct mBKGLES2Shader* shader) {
-	glDeleteTextures(1, &shader->tex);
+	glDeleteTextures(1, &shader->gbc_tex);
+	glDeleteTextures(1, &shader->gba_tex);
 	glDeleteShader(shader->fragmentShader);
 	glDeleteProgram(shader->program);
-	glDeleteFramebuffers(1, &shader->fbo);
+	glDeleteFramebuffers(1, &shader->gbc_fbo);
+	glDeleteFramebuffers(1, &shader->gba_fbo);
 #ifdef BUILD_GLES3
 	if (shader->vao != (GLuint) -1) {
 		glDeleteVertexArrays(1, &shader->vao);

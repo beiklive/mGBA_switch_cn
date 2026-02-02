@@ -218,30 +218,30 @@ void bk_init_fbo(int width, int height)
         g_game_width = width;
         g_game_height = height;
 
-        struct BKVideoShader* shader =
-            bk_global_shaders->shaders[bk_global_shader_index];
+        // struct BKVideoShader* shader =
+        //     bk_global_shaders->shaders[bk_global_shader_index];
 
-        struct mBKGLES2Shader* passes =
-            (struct mBKGLES2Shader*)shader->passes;
+        // struct mBKGLES2Shader* passes =
+        //     (struct mBKGLES2Shader*)shader->passes;
 
-        struct mBKGLES2Shader* pass0 = &passes[0];
+        // struct mBKGLES2Shader* pass0 = &passes[0];
 
-        glBindFramebuffer(GL_FRAMEBUFFER, pass0->fbo);
-        glBindTexture(GL_TEXTURE_2D, pass0->tex);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        // glBindFramebuffer(GL_FRAMEBUFFER, pass0->fbo);
+        // glBindTexture(GL_TEXTURE_2D, pass0->tex);
+        // glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
         
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
             
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pass0->tex, 0);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        // glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pass0->tex, 0);
+        // glBindTexture(GL_TEXTURE_2D, 0);
+        // glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 }
 
-void bk_switch_to_fbo(bool enable)
+void bk_switch_to_fbo(struct mGUIRunner* runner, bool enable)
 {
     
     if (enable && bk_global_shader_index >= 0) {
@@ -253,7 +253,12 @@ void bk_switch_to_fbo(bool enable)
                 (struct mBKGLES2Shader*)shader->passes;
         
             struct mBKGLES2Shader* pass0 = &passes[0];
-            glBindFramebuffer(GL_FRAMEBUFFER, pass0->fbo);
+            if(runner->core->platform(runner->core) == 1)
+            {
+                glBindFramebuffer(GL_FRAMEBUFFER, pass0->gbc_fbo);
+            }else{
+                glBindFramebuffer(GL_FRAMEBUFFER, pass0->gba_fbo);
+            }
             glClearColor(0, 0, 0, 1);
             glClear(GL_COLOR_BUFFER_BIT);
     
@@ -263,7 +268,7 @@ void bk_switch_to_fbo(bool enable)
     }
 }
 
-void bk_render_fbo(int width, int height)
+void bk_render_fbo(struct mGUIRunner* runner, int width, int height)
 {
     if(bk_global_shader_index >= 0)
     {
@@ -277,7 +282,12 @@ void bk_render_fbo(int width, int height)
         glUseProgram(pass0->program);
         glBindVertexArray(pass0->vao);
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, pass0->tex);
+        if(runner->core->platform(runner->core) == 1)
+        {
+            glBindTexture(GL_TEXTURE_2D, pass0->gbc_tex);
+        }else{
+            glBindTexture(GL_TEXTURE_2D, pass0->gba_tex);
+        }
         glTexParameteri(
             GL_TEXTURE_2D,
             GL_TEXTURE_MAG_FILTER,

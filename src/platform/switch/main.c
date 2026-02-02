@@ -525,7 +525,7 @@ static void _drawTex(
 	// 设置输出尺寸比例（用于顶点或片段着色器） 绘制区域大小（缩放和居中）
 	int isShaderEnabled = 0;
 	BK_GLOBAL_INT_GET(BK_META_SHADER_ENABLE, isShaderEnabled);
-	if(isShaderEnabled)
+	if(isShaderEnabled && bk_global_shader_index >= 0)
 	{
 		glUniform2f(dimsLocation, 1.0f, 1.0f);
 	}
@@ -860,7 +860,7 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 	}
 	else
 	{
-		bk_switch_to_fbo(true);
+		bk_switch_to_fbo(runner, true);
 		glViewport(0, 0, width, height);
 		// 如果启用帧间混合，先绘制淡化的前一帧，再绘制当前帧
 		if (interframeBlending) {
@@ -872,7 +872,7 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 			_drawTex(runner, width, height, faded, false);
 		}
 	
-		bk_switch_to_fbo(false);
+		bk_switch_to_fbo(runner, false);
 
 		float aspectX = width / (float) vwidth;
 		float aspectY = height / (float) vheight;
@@ -920,7 +920,7 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 		unsigned renderX = (vwidth - renderWidth) / 2;
 		unsigned renderY = (vheight - renderHeight) / 2;
 		glViewport(renderX, 1080 - vheight + renderY, renderWidth, renderHeight);
-		bk_render_fbo(width, height);
+		bk_render_fbo(runner, width, height);
 	}
 	glViewport(
 		0,

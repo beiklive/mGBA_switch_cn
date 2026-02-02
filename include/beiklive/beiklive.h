@@ -1,6 +1,7 @@
 #ifndef BEIKLIVE_H
 #define BEIKLIVE_H
 
+#include <mgba/core/core.h>
 #include <mgba-util/formatting.h>
 #include <mgba-util/gui/font.h>
 #include <mgba-util/memory.h>
@@ -267,8 +268,10 @@ struct mBKGLES2Shader {
 	bool filter;
 	bool blend;
 	bool dirty;
-	GLuint tex;
-	GLuint fbo;
+	GLuint gba_tex;
+	GLuint gbc_tex;
+	GLuint gba_fbo;
+	GLuint gbc_fbo;
 	GLuint vao;
 	GLuint vbo;
 	GLuint fragmentShader;
@@ -353,7 +356,7 @@ extern GLuint bkShaderProgram;
 extern bool useFBO;
 
 void bk_init_fbo(int width, int height);
-void bk_switch_to_fbo(bool enable);
-void bk_render_fbo(int width, int height);
+void bk_switch_to_fbo(struct mGUIRunner* runner, bool enable);
+void bk_render_fbo(struct mGUIRunner* runner, int width, int height);
 
 #endif
