@@ -85,6 +85,10 @@ static void ReadStateConfig(struct GUIMenu *menu, struct mGUIRunner* runner) {
                     mCoreConfigGetUIntValue(&runner->config, item->data.v.s, &item->state);
                 }
             }
+            if(item->id == 4616)
+            {
+                item->state = bk_global_shader_index + 1;
+            }
         }
 }
 
@@ -282,11 +286,17 @@ void mGUIShaderSet(struct mGUIRunner* runner)
             }
             mCoreConfigSave(&runner->config);
 			mCoreLoadForeignConfig(runner->core, &runner->config);
+            	// 初始化滤镜和fbo缓冲尺寸
+            int isShaderEnabled = 0;
+            BK_GLOBAL_INT_GET(BK_META_SHADER_ENABLE, isShaderEnabled);
+            if(isShaderEnabled && (bk_global_shaders == NULL) ){
+                bk_shader_list_init();
+            }
             bk_init_fbo(g_game_width, g_game_height);
             GUIShowMessageBox(&runner->params, GUI_MESSAGE_BOX_OK, 240, "保存完成!");
             break;
         }
-        if(action == BK_CONFIG_STATUS_1){
+        else if(action == BK_CONFIG_STATUS_1){
             for (int i = 0; i < GUIMenuItemListSize(&menu.items); ++i) {
                 item = GUIMenuItemListGetPointer(&menu.items, i);
 				if (!item->validStates || !GUIVariantIsString(item->data)) {
@@ -304,20 +314,9 @@ void mGUIShaderSet(struct mGUIRunner* runner)
                     }
                 }
             }
+        }else{
+            break;
         }
-
-
-
-
-
-
-
-
-
-
-
-
-
         GUIMenuItemListClear(&menu.items);
     }
 

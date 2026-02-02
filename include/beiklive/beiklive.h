@@ -320,7 +320,10 @@ void bk_shader_list_deinit(void);
 int bk_shader_get_count(void);
 char** bk_shader_get_names(void);
 
+void bk_shader_cur_index_set(const char* name);
 
+const char* bk_shader_get_name(int index);
+int bk_shader_get_index(const char* name);
 void ApplyUniform(struct mBKGLES2Uniform* u);
 void UniformMinMaxToString(const struct mBKGLES2Uniform* u, char* out, size_t outSize);
 void UniformValueToString(const struct mBKGLES2Uniform* u, char* out, size_t outSize);
@@ -351,7 +354,6 @@ extern bool useFBO;
 
 void bk_init_fbo(int width, int height);
 void bk_switch_to_fbo(bool enable);
-void bk_render_fbo(GLuint* texture, int width, int height);
-void bk_deinit_fbo(void);
+void bk_render_fbo(int width, int height);
 
 #endif

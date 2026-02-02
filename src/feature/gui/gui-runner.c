@@ -903,7 +903,6 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 	GUIMenuItemListDeinit(&stateSaveMenu.items);
 	GUIMenuItemListDeinit(&stateLoadMenu.items);
 
-	bk_deinit_fbo();
 	mLOG(GUI_RUNNER, INFO, "Game stopped!");
 }
 

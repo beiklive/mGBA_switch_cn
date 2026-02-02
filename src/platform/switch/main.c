@@ -845,7 +845,7 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 	}
 	int isShaderEnabled = 0;
 	BK_GLOBAL_INT_GET(BK_META_SHADER_ENABLE, isShaderEnabled);
-	if(!isShaderEnabled)
+	if(!isShaderEnabled || bk_global_shader_index < 0)
 	{
 		glViewport(0, 1080 - vheight, vwidth, vheight);
 		// 如果启用帧间混合，先绘制淡化的前一帧，再绘制当前帧
@@ -920,7 +920,7 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 		unsigned renderX = (vwidth - renderWidth) / 2;
 		unsigned renderY = (vheight - renderHeight) / 2;
 		glViewport(renderX, 1080 - vheight + renderY, renderWidth, renderHeight);
-		bk_render_fbo(&bkfboTex, width, height);
+		bk_render_fbo(width, height);
 	}
 	glViewport(
 		0,
@@ -1632,6 +1632,19 @@ int main(int argc, char* argv[]) {
 
 	// 初始化滤镜
 	bk_shader_list_init();
+	int isShaderEnabled = 0;
+	BK_GLOBAL_INT_GET(BK_META_SHADER_ENABLE, isShaderEnabled);
+	if(isShaderEnabled){
+		printf("滤镜功能开，初始化滤镜管理器\n");
+		const char* shaderName = mCoreConfigGetValue(&runner.config, BK_META_SHADER_NAME);
+		if(shaderName && shaderName[0]){
+			bk_shader_cur_index_set(shaderName);
+			printf("当前滤镜：%s\n", shaderName);
+		}else{
+			bk_global_shader_index = -1;
+			printf("未设置当前滤镜\n");
+		}
+	}
 
 	
 	// ===================beiklive

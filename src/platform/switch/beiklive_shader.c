@@ -1,7 +1,7 @@
 #include <beiklive/beiklive.h>
 
 bk_shaderList_t* bk_global_shaders = NULL;
-int bk_global_shader_index = 0;
+int bk_global_shader_index = -1;
 // 获取目录下所有包含 manifest.ini 的子目录路径
 // 参数为 shader 根目录路径     子目录路径数组  子目录个数
 
@@ -192,7 +192,13 @@ void bk_shader_list_init(void)
     printf("Loaded %d shaders\n", bk_global_shaders->count);
 }
 
-
+void bk_shader_cur_index_set(const char* name)
+{
+    if (!bk_global_shaders && !name) {
+        return;
+    }
+    bk_global_shader_index = bk_shader_get_index(name);
+}
 
 void bk_shader_list_deinit(void)
 {
@@ -252,7 +258,6 @@ char** bk_shader_get_names(void)
 
     for (int i = 0; i < count; i++) {
         names[i] = bk_global_shaders->shaders[i]->name;
-        printf("Shader %d: %s\n", i, bk_global_shaders->shaders[i]->name);
     }
 
     return names;
@@ -398,3 +403,33 @@ void UniformMinMaxToString(
         break;
     }
 }
+
+
+const char* bk_shader_get_name(int index)
+{
+    if(!bk_global_shaders){
+        return NULL;
+    }
+    if(index < 0 || index >= bk_global_shaders->count){
+        return NULL;
+    }
+    struct BKVideoShader* shader =
+            bk_global_shaders->shaders[index];
+    return shader->name;
+}
+
+int bk_shader_get_index(const char* name)
+{
+    if(!bk_global_shaders){
+        return -1;
+    }
+    for(int i = 0; i < bk_global_shaders->count; i++){
+        struct BKVideoShader* shader =
+                bk_global_shaders->shaders[i];
+        if(strcmp(shader->name, name) == 0){
+            return i;
+        }
+    }
+    return -1;
+}
+

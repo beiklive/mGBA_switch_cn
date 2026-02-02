@@ -214,7 +214,7 @@ void bk_init_mask_texture(const char* filepath, int maskType){
 
 void bk_init_fbo(int width, int height)
 {
-    if(bk_global_shaders){
+    if(bk_global_shaders && bk_global_shader_index >= 0){
         g_game_width = width;
         g_game_height = height;
 
@@ -226,20 +226,26 @@ void bk_init_fbo(int width, int height)
 
         struct mBKGLES2Shader* pass0 = &passes[0];
 
+        glBindFramebuffer(GL_FRAMEBUFFER, pass0->fbo);
         glBindTexture(GL_TEXTURE_2D, pass0->tex);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
-                    width, height,
-                    0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pass0->tex, 0);
         glBindTexture(GL_TEXTURE_2D, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 }
 
 void bk_switch_to_fbo(bool enable)
 {
     
-    if (enable) {
-        if(bk_global_shaders){
+    if (enable && bk_global_shader_index >= 0) {
+        if(bk_global_shaders ){
             struct BKVideoShader* shader =
                 bk_global_shaders->shaders[bk_global_shader_index];
         
@@ -257,40 +263,36 @@ void bk_switch_to_fbo(bool enable)
     }
 }
 
-void bk_render_fbo(GLuint *texture, int width, int height)
+void bk_render_fbo(int width, int height)
 {
-    struct BKVideoShader* shader =
-    bk_global_shaders->shaders[bk_global_shader_index];
-
-    struct mBKGLES2Shader* passes =
-        (struct mBKGLES2Shader*)shader->passes;
-
-    struct mBKGLES2Shader* pass0 = &passes[0];
-    glUseProgram(pass0->program);
-    glBindVertexArray(pass0->vao);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, pass0->tex);
-    glTexParameteri(
-		GL_TEXTURE_2D,
-		GL_TEXTURE_MAG_FILTER,
-		GL_NEAREST
-	);
-
-    glUniform1i(pass0->texLocation, 0);
-    glUniform2f(pass0->texSizeLocation, (float)width, (float)height);
-
-    // 使用三角扇绘制一个矩形（四个顶点）
-    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+    if(bk_global_shader_index >= 0)
+    {
+        struct BKVideoShader* shader =
+        bk_global_shaders->shaders[bk_global_shader_index];
     
-    // 解绑顶点数组
-    glBindVertexArray(0);
-    glUseProgram(0);
+        struct mBKGLES2Shader* passes =
+            (struct mBKGLES2Shader*)shader->passes;
+    
+        struct mBKGLES2Shader* pass0 = &passes[0];
+        glUseProgram(pass0->program);
+        glBindVertexArray(pass0->vao);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, pass0->tex);
+        glTexParameteri(
+            GL_TEXTURE_2D,
+            GL_TEXTURE_MAG_FILTER,
+            GL_NEAREST
+        );
+    
+        glUniform1i(pass0->texLocation, 0);
+        glUniform2f(pass0->texSizeLocation, (float)width, (float)height);
+    
+        // 使用三角扇绘制一个矩形（四个顶点）
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+        
+        // 解绑顶点数组
+        glBindVertexArray(0);
+        glUseProgram(0);
+    }
 }
 
-void bk_deinit_fbo(void){
-    glDeleteProgram(bkShaderProgram);
-    glDeleteFramebuffers(1, &bkfbo);
-    glDeleteTextures(1, &bkfboTex);
-    glDeleteVertexArrays(1, &bkfboVao);
-    glDeleteBuffers(1, &bkfboVbo);
-}
