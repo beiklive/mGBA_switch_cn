@@ -239,17 +239,7 @@ static void _mapKey(struct mInputMap* map, uint32_t binding, int nativeKey, int 
 
 // BKMARK _drawStart  清空背景
 static void _drawStart(void) {
-	int themeType = BK_THEME_DEFAULT;
-	BK_GLOBAL_INT_GET(BK_META_CONFIG_THEME, themeType);
-	int type;
-	BK_GLOBAL_INT_GET(BK_PRO_STATUS, type);
-	if (themeType == BK_THEME_DEFAULT || type == BK_RUNNING_TYPE_GAME) {
-		glClearColor(0.f, 0.f, 0.f, 1.f);
-	} else if (themeType == BK_THEME_SWITCH) {
-		glClearColor(235.0f/255.0f, 235.0f/255.0f, 235.0f/255.0f, 1.0f);
-	}else{
-		glClearColor(0.f, 0.f, 0.f, 1.f);
-	}
+	glClearColor(0.f, 0.f, 0.f, 1.f);
 	// 清空颜色缓冲
 	glClear(GL_COLOR_BUFFER_BIT);
 }
@@ -454,7 +444,6 @@ static void _gameLoaded(struct mGUIRunner* runner) {
 	int maxBrightness = 5;
 	if (mCoreConfigGetIntValue(&runner->config, BK_META_SCREEN_BRIGHTNESS, &maxBrightness)) {
 		g_cur_screen_brightness = bk_mapNumberToBrightness(maxBrightness);
-		printf("max brightness: %d g_cur_screen_brightness: %.1f\n", maxBrightness, g_cur_screen_brightness);
 	}
 	int maxAspectRatio = 1;
 	if (runner->core->platform(runner->core) == mPLATFORM_GBA)
@@ -469,7 +458,7 @@ static void _gameLoaded(struct mGUIRunner* runner) {
 			g_cur_screen_aspect_ratio = maxAspectRatio;
 		}
 	}
-	printf("max aspect ratio: %d\n", g_cur_screen_aspect_ratio);
+
 
 
 	// 处理GPU加速配置更改
@@ -871,9 +860,12 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 	}
 	int isShaderEnabled = 0;
 	BK_GLOBAL_INT_GET(BK_META_SHADER_ENABLE, isShaderEnabled);
+	int isMaskEnabled = 0;
+	BK_GLOBAL_INT_GET(BK_META_MASK_ENABLE, isMaskEnabled);
 	if(!isShaderEnabled || bk_global_shader_index < 0)
 	{
-		glViewport(0, 1080 - vheight, vwidth, vheight);
+		// glViewport(0, 1080 - vheight , vwidth, vheight);
+		glViewport(0, 1080 - vheight + bk_Normal_offset(runner, height, vheight) , vwidth, vheight);
 		// 如果启用帧间混合，先绘制淡化的前一帧，再绘制当前帧
 		if (interframeBlending) {
 			glBindTexture(GL_TEXTURE_2D, oldTex);
@@ -1614,11 +1606,15 @@ int main(int argc, char* argv[]) {
 	const char* current_gba = mCoreConfigGetValue(&runner.config, BK_META_MASK_GBA);
 	if(current_gba){
 		bk_init_mask_texture(current_gba, 0);
+		g_gba_video_offset_y = bk_Mask_OffsetRead(current_gba);
 	}
 	const char* current_gbc = mCoreConfigGetValue(&runner.config, BK_META_MASK_GBC);
 	if(current_gbc){
 		bk_init_mask_texture(current_gbc, 1);
+		g_gbc_video_offset_y = bk_Mask_OffsetRead(current_gbc);
 	}
+
+
 	int isBgEnabled = 0;
 	BK_GLOBAL_INT_GET(BK_META_PATH_BACKGROUND_ENABLE, isBgEnabled);
 	const char* current_bg = mCoreConfigGetValue(&runner.config, BK_META_PATH_BACKGROUND);

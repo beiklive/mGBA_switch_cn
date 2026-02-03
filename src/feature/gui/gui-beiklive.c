@@ -115,7 +115,6 @@ void mGUIScreenSet(struct mGUIRunner* runner) {
 		char* stateText = malloc(8);
 		snprintf(stateText, 8, "x%d", i + 1);
 		validStates[i] = stateText;
-
 		// 设置对应的数值映射
 		stateMappings[i] = GUI_V_U(i + 1);
 	}
@@ -154,7 +153,6 @@ void mGUIScreenSet(struct mGUIRunner* runner) {
 		                                                                      GUI_V_U(4), GUI_V_U(5), GUI_V_U(6),
 		                                                                      GUI_V_U(7), GUI_V_U(8), GUI_V_U(9) },
 		                       .nStates = 9 };
-
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
 		.title = "保存修改",
 		.data = GUI_V_U(BK_CONFIG_SAVE),
@@ -163,11 +161,7 @@ void mGUIScreenSet(struct mGUIRunner* runner) {
 		.title = "返回",
 		.data = GUI_V_V,
 	};
-
 	ReadStateConfig(&menu, runner);
-
-
-
 
 	while (true) {
 		struct GUIMenuItem* item;
@@ -215,6 +209,8 @@ void mGUIScreenSet(struct mGUIRunner* runner) {
 			break;
 		}
 	}
+	GUIMenuItemListDeinit(&menu.items);
+
 }
 
 void mGUIUniformSet(struct mGUIRunner* runner, int ShaderIndex) {
@@ -313,10 +309,11 @@ void mGUIShaderSet(struct mGUIRunner* runner) {
 		                                                         .validStates = names,
 		                                                         .nStates = total };
 
-	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "滤镜参数设置(有需要再改)",
-		.data = GUI_V_U(BK_CONFIG_STATUS_1),
-	};
+    // BKTODO 暂时移除
+	// *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+	// 	.title = "滤镜参数设置(有需要再改)",
+	// 	.data = GUI_V_U(BK_CONFIG_STATUS_1),
+	// };
 
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
 		.title = "保存设置",
@@ -601,10 +598,12 @@ void mGUIShowMaskSet(struct mGUIRunner* runner) {
 			if (mask_name_gba[0]) {
 				mCoreConfigSetValue(&runner->config, BK_META_MASK_GBA, mask_name_gba);
 				bk_init_mask_texture(mask_name_gba, 0);
+                g_gba_video_offset_y = bk_Mask_OffsetRead(mask_name_gba);
 			}
 			if (mask_name_gbc[0]) {
 				mCoreConfigSetValue(&runner->config, BK_META_MASK_GBC, mask_name_gbc);
 				bk_init_mask_texture(mask_name_gbc, 1);
+                g_gbc_video_offset_y = bk_Mask_OffsetRead(mask_name_gbc);
 			}
 
 			// 保存数据变量  mCoreConfigSetIntValue

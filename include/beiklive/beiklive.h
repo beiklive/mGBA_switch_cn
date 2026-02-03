@@ -36,6 +36,9 @@ extern int g_view_height;
 extern int g_cur_screen_aspect_ratio;
 extern float g_cur_screen_brightness;
 
+extern int g_gba_video_offset_y;
+extern int g_gbc_video_offset_y;
+
 // 主题相关偏移
 #define BK_TITLE_TOP_OFFSET 80
 #define BK_TITLE_BOTTOM_OFFSET 75
@@ -207,6 +210,12 @@ char* bk_util_get_extension(const char* filename);
 char* bk_util_str_concatenate(const char* str1, const char* str2);
 char* bk_util_str_concatenate_multiple(int count, ...);
 bool _bk_mask_Extensions(const char* name);
+
+char* bk_replace_suffix(const char* path, const char* new_suffix);
+int bk_Mask_OffsetRead(const char* maskPath);
+int bk_Normal_offset(struct mGUIRunner* runner, int height, int vheight);
+
+
 
 // =======绘图函数
 struct VFile* bk_util_open_png(const char* path, int mode);

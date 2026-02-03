@@ -45,6 +45,11 @@ int g_view_height = 720;
 
 int g_cur_screen_aspect_ratio = 3;
 float g_cur_screen_brightness = 1.0f;
+
+int g_gba_video_offset_y = 0;
+int g_gbc_video_offset_y = 0;
+
+
 #define MAX_PASSES 8
 
 static const GLfloat bkQuadVerts[] = {
@@ -148,6 +153,243 @@ void mBKGLES2UniformListCopy(struct mBKGLES2UniformList* dest, const struct mBKG
 
 
 // ============ 内部辅助函数 ============
+#define MAX_LINE_LENGTH 256
+#define MAX_KEY_LENGTH 64
+#define MAX_VALUE_LENGTH 64
+
+// 配置文件条目结构
+struct ConfigEntry {
+    char key[MAX_KEY_LENGTH];
+    char value[MAX_VALUE_LENGTH];
+};
+
+// 配置文件结构
+struct ConfigFile {
+    struct ConfigEntry *entries;
+    int count;
+    int capacity;
+} ;
+
+static struct ConfigFile *config_cache = NULL;
+static char *last_filepath = NULL;
+
+
+/**
+ * 去除字符串两端的空白字符
+ */
+static char* trim(char *str) {
+    if (str == NULL) return NULL;
+    
+    // 去除开头的空白字符
+    char *start = str;
+    while (*start && isspace((unsigned char)*start)) {
+        start++;
+    }
+    
+    // 如果整个字符串都是空白
+    if (*start == '\0') {
+        str[0] = '\0';
+        return str;
+    }
+    
+    // 去除结尾的空白字符
+    char *end = start + strlen(start) - 1;
+    while (end > start && isspace((unsigned char)*end)) {
+        end--;
+    }
+    
+    *(end + 1) = '\0';
+    
+    // 将结果移回原字符串开头
+    if (start != str) {
+        memmove(str, start, end - start + 2); // +2 包含 '\0'
+    }
+    
+    return str;
+}
+
+/**
+ * 初始化配置文件结构
+ */
+static struct ConfigFile* init_config() {
+    struct ConfigFile *config = malloc(sizeof(struct ConfigFile));
+    if (!config) return NULL;
+    
+    config->capacity = 10;
+    config->count = 0;
+    config->entries = malloc(config->capacity * sizeof(struct ConfigEntry));
+    
+    if (!config->entries) {
+        free(config);
+        return NULL;
+    }
+    
+    return config;
+}
+
+/**
+ * 向配置文件中添加条目
+ */
+static void add_entry(struct ConfigFile *config, const char *key, const char *value) {
+    if (!config || !key || !value) return;
+    
+    // 如果容量不足，扩展
+    if (config->count >= config->capacity) {
+        config->capacity *= 2;
+        struct ConfigEntry *new_entries = realloc(config->entries, 
+                                           config->capacity * sizeof(struct ConfigEntry));
+        if (!new_entries) return;
+        config->entries = new_entries;
+    }
+    
+    // 添加新条目
+    strncpy(config->entries[config->count].key, key, MAX_KEY_LENGTH - 1);
+    config->entries[config->count].key[MAX_KEY_LENGTH - 1] = '\0';
+    
+    strncpy(config->entries[config->count].value, value, MAX_VALUE_LENGTH - 1);
+    config->entries[config->count].value[MAX_VALUE_LENGTH - 1] = '\0';
+    
+    config->count++;
+}
+
+/**
+ * 释放配置文件资源
+ */
+static void free_config(struct ConfigFile *config) {
+    if (config) {
+        if (config->entries) {
+            free(config->entries);
+        }
+        free(config);
+    }
+}
+
+/**
+ * 解析配置文件
+ */
+static struct ConfigFile* parse_config_file(const char *filepath) {
+    if (!filepath) return NULL;
+    
+	struct VFile* vf = VFileOpen(filepath, O_RDONLY);
+	if (!vf) {
+		return false;
+	}
+
+    
+    struct ConfigFile *config = init_config();
+    if (!config) {
+        vf->close(vf);
+        return NULL;
+    }
+    
+    char line[MAX_LINE_LENGTH];
+    
+    while (vf->readline(vf, line, sizeof(line))) {
+        
+        // 去除换行符
+        line[strcspn(line, "\n")] = '\0';
+        
+        // 去除前后空白
+        trim(line);
+        
+        // 跳过空行和注释行
+        if (line[0] == '\0' || line[0] == '#') {
+            continue;
+        }
+        
+        // 查找等号分隔符
+        char *separator = strchr(line, '=');
+        if (!separator) {
+            continue;
+        }
+        
+        // 分割键和值
+        *separator = '\0'; // 在等号处截断
+        
+        char *key = line;
+        char *value = separator + 1;
+        
+        // 去除键和值的空白字符
+        trim(key);
+        trim(value);
+        
+        // 如果键或值为空，跳过
+        if (key[0] == '\0' || value[0] == '\0') {
+            continue;
+        }
+        
+        // 添加条目
+        add_entry(config, key, value);
+    }
+    
+    vf->close(vf);
+    return config;
+}
+
+/**
+ * 查找配置值并转换为整数
+ */
+int getIntValue(const char *filepath, const char *key) {
+    if (!filepath || !key) return 0;
+    
+
+    
+    // 如果文件路径不同或缓存为空，重新解析
+    if (!config_cache || !last_filepath || strcmp(filepath, last_filepath) != 0) {
+        // 释放旧的缓存
+        if (config_cache) {
+            free_config(config_cache);
+            config_cache = NULL;
+        }
+        if (last_filepath) {
+            free(last_filepath);
+            last_filepath = NULL;
+        }
+        
+        // 解析新文件
+        config_cache = parse_config_file(filepath);
+        if (!config_cache) return 0;
+        
+        // 缓存文件路径
+        last_filepath = strdup(filepath);
+        if (!last_filepath) {
+            free_config(config_cache);
+            config_cache = NULL;
+            return 0;
+        }
+    }
+    
+    // 查找键
+    for (int i = 0; i < config_cache->count; i++) {
+        if (strcmp(config_cache->entries[i].key, key) == 0) {
+            // 转换为整数
+            char *endptr;
+            long value = strtol(config_cache->entries[i].value, &endptr, 10);
+            
+            // 检查转换是否成功
+            if (endptr == config_cache->entries[i].value) {
+                return 0;
+            }
+            
+            return (int)value;
+        }
+    }
+    return 0;
+}
+
+/**
+ * 清理缓存（可选，程序结束时调用）
+ */
+void cleanup_config_cache() {
+    if (config_cache) {
+        free_config(config_cache);
+        config_cache = NULL;
+    }
+    if (last_filepath) {
+        free(last_filepath);
+        last_filepath = NULL;
+    }
+}
 
 /**
  * 初始化配置文件（内部函数）
@@ -1773,4 +2015,72 @@ float bk_mapNumberToBrightness(int num) {
     if (num > 9) num = 9;
     
     return 0.2f * num;
+}
+
+char* bk_replace_suffix(const char* path, const char* new_suffix) {
+    if (path == NULL || new_suffix == NULL) {
+        return NULL;
+    }
+    const char* last_dot = strrchr(path, '.');
+    const char* last_slash = strrchr(path, '/');
+    if (last_dot != NULL && (last_slash == NULL || last_dot > last_slash)) {
+        size_t base_len = last_dot - path;
+        size_t new_len = base_len + strlen(new_suffix);
+        
+        char* new_path = (char*)malloc(new_len + 1);
+        if (new_path == NULL) {
+            return NULL;
+        }
+        strncpy(new_path, path, base_len);
+        new_path[base_len] = '\0';
+        
+        strcat(new_path, new_suffix);
+        
+        return new_path;
+    } else {
+        size_t path_len = strlen(path);
+        size_t new_len = path_len + strlen(new_suffix);
+        
+        char* new_path = (char*)malloc(new_len + 1);
+        if (new_path == NULL) {
+            return NULL;
+        }
+        
+        strcpy(new_path, path);
+        
+        strcat(new_path, new_suffix);
+        
+        return new_path;
+    }
+}
+
+
+int bk_Mask_OffsetRead(const char* maskPath)
+{
+	char* maskConfigFilePath = bk_replace_suffix(maskPath, ".cfg");
+	if (maskConfigFilePath == NULL) {
+		return 0;
+	}
+	int Padding_Bottom = getIntValue(maskConfigFilePath, "Padding_Bottom");
+	int mask_height = getIntValue(maskConfigFilePath, "mask_height");
+
+	int mask_offset = (int)(g_view_height * (Padding_Bottom / (float)mask_height));
+
+
+	free(maskConfigFilePath);
+	cleanup_config_cache();
+	return mask_offset;
+}
+
+
+int bk_Normal_offset(struct mGUIRunner* runner, int height, int vheight){
+	int asHeight = (int)(height * (float)g_cur_screen_aspect_ratio);
+	int renderY = (g_view_height - asHeight) / 2;
+	if(runner->core->platform(runner->core) == 1)
+	{
+		return g_gbc_video_offset_y - renderY;
+	}else{
+		return g_gba_video_offset_y - renderY;
+		
+	}
 }

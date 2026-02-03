@@ -259,11 +259,18 @@ void bk_render_fbo(struct mGUIRunner* runner, int width, int height, float aspec
             }
             else
             {
+                int isMaskEnabled = 0;
+	            BK_GLOBAL_INT_GET(BK_META_MASK_ENABLE, isMaskEnabled);
                 unsigned renderWidth = (unsigned) (aspectX * g_view_width);
                 unsigned renderHeight = (unsigned) (aspectY * g_view_height);
                 unsigned renderX = (g_view_width - renderWidth) / 2;
                 unsigned renderY = (g_view_height - renderHeight) / 2;
-                glViewport(renderX, 1080 - g_view_height + renderY, renderWidth, renderHeight);
+                if(runner->core->platform(runner->core) == 1)
+                {
+                    glViewport(renderX, 1080 - g_view_height + (isMaskEnabled?g_gbc_video_offset_y:renderY), renderWidth, renderHeight);
+                }else{
+                    glViewport(renderX, 1080 - g_view_height + (isMaskEnabled?g_gba_video_offset_y:renderY), renderWidth, renderHeight);
+                }
             }
             struct mBKGLES2Shader* cur_pass = &passes[i];
             glUseProgram(cur_pass->program);
