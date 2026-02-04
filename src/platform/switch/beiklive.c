@@ -2078,9 +2078,9 @@ int bk_Normal_offset(struct mGUIRunner* runner, int height, int vheight){
 	int renderY = (g_view_height - asHeight) / 2;
 	if(runner->core->platform(runner->core) == 1)
 	{
-		return g_gbc_video_offset_y - renderY;
+		return renderY - g_gbc_video_offset_y;
 	}else{
-		return g_gba_video_offset_y - renderY;
+		return renderY - g_gba_video_offset_y;
 		
 	}
 }

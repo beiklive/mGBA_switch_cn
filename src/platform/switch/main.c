@@ -865,7 +865,7 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 	if(!isShaderEnabled || bk_global_shader_index < 0)
 	{
 		// glViewport(0, 1080 - vheight , vwidth, vheight);
-		glViewport(0, 1080 - vheight + bk_Normal_offset(runner, height, vheight) , vwidth, vheight);
+		glViewport(0, 1080 - vheight - (isMaskEnabled?bk_Normal_offset(runner, height, vheight):0) , vwidth, vheight);
 		// 如果启用帧间混合，先绘制淡化的前一帧，再绘制当前帧
 		if (interframeBlending) {
 			glBindTexture(GL_TEXTURE_2D, oldTex);
