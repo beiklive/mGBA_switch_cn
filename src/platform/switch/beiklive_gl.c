@@ -11,6 +11,17 @@ GLuint bkcolorLocation;       // 颜色uniform位置
 GLuint bkvbo;                 // 顶点缓冲对象
 GLuint bkvao;                 // 顶点数组对象
 
+bool useFBO = true;
+
+static const GLfloat bkQuadVerts[] = {
+    // x, y,      u, v
+    -1.f, -1.f,  0.f, 0.f,
+     1.f, -1.f,  1.f, 0.f,
+     1.f,  1.f,  1.f, 1.f,
+    -1.f,  1.f,  0.f, 1.f,
+};
+
+
 // 定义四边形顶点的偏移坐标（0-1范围）
 static const GLfloat _offsets[] = {
 	0.f, 0.f,  // 左下角
@@ -195,3 +206,100 @@ void bk_init_mask_texture(const char* filepath, int maskType){
     free(maskpath);
     BK_GLOBAL_INT_SET(maskType == 0 ? BK_META_MASK_STATUS_GBA : BK_META_MASK_STATUS_GBC, success);
 }
+
+void bk_init_fbo(int width, int height)
+{
+    g_game_width = width;
+    g_game_height = height;
+}
+
+void bk_switch_to_fbo(struct mGUIRunner* runner, bool enable, int passIndex)
+{
+    
+    if (enable && bk_global_shader_index >= 0) {
+        if(bk_global_shaders ){
+            struct BKVideoShader* shader =
+                bk_global_shaders->shaders[bk_global_shader_index];
+        
+            struct mBKGLES2Shader* passes =
+                (struct mBKGLES2Shader*)shader->passes;
+        
+            struct mBKGLES2Shader* pass0 = &passes[passIndex];
+            if(runner->core->platform(runner->core) == 1)
+            {
+                glBindFramebuffer(GL_FRAMEBUFFER, pass0->gbc_fbo);
+            }else{
+                glBindFramebuffer(GL_FRAMEBUFFER, pass0->gba_fbo);
+            }
+            glClearColor(0, 0, 0, 1);
+            glClear(GL_COLOR_BUFFER_BIT);
+    
+        }
+    } else {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+}
+
+void bk_render_fbo(struct mGUIRunner* runner, int width, int height, float aspectX, float aspectY)
+{
+    if(bk_global_shader_index >= 0)
+    {
+        struct BKVideoShader* shader =
+        bk_global_shaders->shaders[bk_global_shader_index];
+    
+        struct mBKGLES2Shader* passes =
+            (struct mBKGLES2Shader*)shader->passes;
+    
+        for(int i = 0; i < shader->nPasses; i++)
+        {
+            if((i + 1) < shader->nPasses)
+            {
+                bk_switch_to_fbo(runner, true, i+1);
+                glViewport(0, 0, width, height);
+            }
+            else
+            {
+                int isMaskEnabled = 0;
+	            BK_GLOBAL_INT_GET(BK_META_MASK_ENABLE, isMaskEnabled);
+                unsigned renderWidth = (unsigned) (aspectX * g_view_width);
+                unsigned renderHeight = (unsigned) (aspectY * g_view_height);
+                unsigned renderX = (g_view_width - renderWidth) / 2;
+                unsigned renderY = (g_view_height - renderHeight) / 2;
+                if(runner->core->platform(runner->core) == 1)
+                {
+                    glViewport(renderX, 1080 - g_view_height + (isMaskEnabled?g_gbc_video_offset_y:renderY), renderWidth, renderHeight);
+                }else{
+                    glViewport(renderX, 1080 - g_view_height + (isMaskEnabled?g_gba_video_offset_y:renderY), renderWidth, renderHeight);
+                }
+            }
+            struct mBKGLES2Shader* cur_pass = &passes[i];
+            glUseProgram(cur_pass->program);
+            glBindVertexArray(cur_pass->vao);
+            glActiveTexture(GL_TEXTURE0);
+            if(runner->core->platform(runner->core) == 1)
+            {
+                glBindTexture(GL_TEXTURE_2D, cur_pass->gbc_tex);
+            }else{
+                glBindTexture(GL_TEXTURE_2D, cur_pass->gba_tex);
+            }
+            glTexParameteri(
+                GL_TEXTURE_2D,
+                GL_TEXTURE_MAG_FILTER,
+                GL_NEAREST
+            );
+        
+            glUniform1i(cur_pass->texLocation, 0);
+            glUniform2f(cur_pass->texSizeLocation, (float)width, (float)height);
+        
+            // 使用三角扇绘制一个矩形（四个顶点）
+            glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+            
+            // 解绑顶点数组
+            glBindVertexArray(0);
+            glUseProgram(0);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
+
+    }
+}
+

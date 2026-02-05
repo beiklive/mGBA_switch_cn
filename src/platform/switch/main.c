@@ -83,13 +83,14 @@ static const char* const _fragmentShader =
 	"varying vec2 texCoord;\n"     // 接收顶点纹理坐标
 	"uniform sampler2D tex;\n"     // 游戏画面纹理
 	"uniform vec4 color;\n"        // 颜色调制
+	"uniform float Brightness;\n"
 
 	"void main() {\n"
-	// 从纹理采样并转换为RGB
-	"	vec4 texColor = vec4(texture2D(tex, texCoord).rgb, 1.0);\n"
-	// 应用颜色调制
-	"	texColor *= color;\n"
-	"	gl_FragColor = texColor;\n"
+	"    vec4 adjustedColor = texture2D(tex, texCoord);\n"
+	"    adjustedColor.rgb *= vec3(1.0, 1.0, 1.0) * Brightness;\n"
+	"    vec4 texColor = vec4(adjustedColor.rgb, 1.0);\n"
+	"    texColor *= color;\n"
+	"    gl_FragColor = texColor;\n"
 	"}";
 
 // OpenGL相关的全局变量
@@ -102,6 +103,7 @@ static GLuint texLocation;         // 纹理uniform位置
 static GLuint dimsLocation;        // 尺寸uniform位置
 static GLuint insizeLocation;      // 输入大小uniform位置
 static GLuint colorLocation;       // 颜色uniform位置
+static GLuint brightnessLocation;  // 亮度uniform位置
 static GLuint tex;                 // 当前游戏画面纹理
 static GLuint oldTex;              // 前一帧的游戏画面纹理（用于帧混合）
 
@@ -237,17 +239,7 @@ static void _mapKey(struct mInputMap* map, uint32_t binding, int nativeKey, int 
 
 // BKMARK _drawStart  清空背景
 static void _drawStart(void) {
-	int themeType = BK_THEME_DEFAULT;
-	BK_GLOBAL_INT_GET(BK_META_CONFIG_THEME, themeType);
-	int type;
-	BK_GLOBAL_INT_GET(BK_PRO_STATUS, type);
-	if (themeType == BK_THEME_DEFAULT || type == BK_RUNNING_TYPE_GAME) {
-		glClearColor(0.f, 0.f, 0.f, 1.f);
-	} else if (themeType == BK_THEME_SWITCH) {
-		glClearColor(235.0f/255.0f, 235.0f/255.0f, 235.0f/255.0f, 1.0f);
-	}else{
-		glClearColor(0.f, 0.f, 0.f, 1.f);
-	}
+	glClearColor(0.f, 0.f, 0.f, 1.f);
 	// 清空颜色缓冲
 	glClear(GL_COLOR_BUFFER_BIT);
 }
@@ -448,6 +440,27 @@ static void _gameLoaded(struct mGUIRunner* runner) {
 		}
 	}
 
+	// 读取亮度值和屏幕
+	int maxBrightness = 5;
+	if (mCoreConfigGetIntValue(&runner->config, BK_META_SCREEN_BRIGHTNESS, &maxBrightness)) {
+		g_cur_screen_brightness = bk_mapNumberToBrightness(maxBrightness);
+	}
+	int maxAspectRatio = 1;
+	if (runner->core->platform(runner->core) == mPLATFORM_GBA)
+	{
+		if (mCoreConfigGetIntValue(&runner->config, BK_META_GBA_ASPECT_RATIO, &maxAspectRatio)) {
+			g_cur_screen_aspect_ratio = maxAspectRatio;
+		}
+	}
+	else
+	{
+		if (mCoreConfigGetIntValue(&runner->config, BK_META_GBC_ASPECT_RATIO, &maxAspectRatio)) {
+			g_cur_screen_aspect_ratio = maxAspectRatio;
+		}
+	}
+
+
+
 	// 处理GPU加速配置更改
 	if (runner->core->supportsFeature(runner->core, mCORE_FEATURE_OPENGL)) {
 		if (mCoreConfigGetIntValue(&runner->config, "hwaccelVideo", &fakeBool) && fakeBool == usePbo) {
@@ -484,9 +497,7 @@ static void _drawTex(
 	bool faded,                  // 是否启用淡化效果
 	bool blendTop                // 是否与上层画面混合
 ) {
-	// 设置 OpenGL 视口
-	// (x=0, y=1080-vheight) 表示从屏幕顶部向下绘制
-	glViewport(0, 1080 - vheight, vwidth, vheight);
+
 
 	// 启用 alpha 混合
 	glEnable(GL_BLEND);
@@ -520,77 +531,88 @@ static void _drawTex(
 		inheight = GB_VIDEO_VERTICAL_PIXELS;
 	}
 	
-	// 计算输入纹理与视口的宽高比例
-	float aspectX = inwidth / vwidth;
-	float aspectY = inheight / vheight;
-
-	// 最大缩放因子，默认 1（不缩放）
-	float max = 1.f;
 	
-	// 根据屏幕显示模式计算缩放方式
-	switch (screenMode) {
-
-	case SM_PA:
-		// 像素精确模式（Pixel Accurate）
-		// 选择整数倍缩放，避免像素失真
-		if (aspectX > aspectY) {
-			max = floor(1.f / aspectX);
-		} else {
-			max = floor(1.f / aspectY);
-		}
-
-		// 如果可用缩放倍数 >= 1，直接使用
-		if (max >= 1.f) {
-			break;
-		}
-		// 否则继续执行下一个模式
-		// Fall through
-
-	case SM_AF:
-		// 宽高比适应模式（Aspect Fit）
-		// 保持宽高比，画面完整显示
-		if (aspectX > aspectY) {
-			max = 1.f / aspectX;
-		} else {
-			max = 1.f / aspectY;
-		}
-		break;
-
-	case SM_SF:
-		// 拉伸填满模式（Stretch Fill）
-		// 不保持宽高比，完全填充屏幕
-		aspectX = 1.f;
-		aspectY = 1.f;
-		break;
-	}
-
-	// 如果不是拉伸填满模式
-	if (screenMode != SM_SF) {
-
-		// 重新基于实际纹理尺寸计算宽高比例
-		aspectX = width / (float) vwidth;
-		aspectY = height / (float) vheight;
-	}
-
-	if (SM_PA == screenMode)
-	{
-		if(runner->core->platform(runner->core) == mPLATFORM_GB)
-		{
-			// GB/GBC 的像素精确模式 适配部分滤镜
-			aspectX = 1120.0f/1920.0f;
-			aspectY = 1008.0f/1080.0f;
-			max = 1.0f;
-		}
-	}
-	// 应用最终缩放因子
-	aspectX *= max;
-	aspectY *= max;
-
 	// 设置纹理采样单元（使用 0 号纹理）
 	glUniform1i(texLocation, 0);
 
+	glUniform1f(brightnessLocation, g_cur_screen_brightness);
+	
 	// 设置输出尺寸比例（用于顶点或片段着色器） 绘制区域大小（缩放和居中）
-	glUniform2f(dimsLocation, aspectX, aspectY);
+	int isShaderEnabled = 0;
+	BK_GLOBAL_INT_GET(BK_META_SHADER_ENABLE, isShaderEnabled);
+	if(isShaderEnabled && bk_global_shader_index >= 0)
+	{
+		glUniform2f(dimsLocation, 1.0f, 1.0f);
+	}
+	else
+	{
+		// 计算输入纹理与视口的宽高比例
+		float aspectX = inwidth / vwidth;
+		float aspectY = inheight / vheight;
+	
+		// 最大缩放因子，默认 1（不缩放）
+		float max = 1.f;
+		
+		// 根据屏幕显示模式计算缩放方式
+		switch (screenMode) {
+	
+		case SM_PA:
+			// 像素精确模式（Pixel Accurate）
+			// 选择整数倍缩放，避免像素失真
+			// if (aspectX > aspectY) {
+			// 	max = floor(1.f / aspectX);
+			// } else {
+			// 	max = floor(1.f / aspectY);
+			// }
+			max = (float)g_cur_screen_aspect_ratio;
+			// 如果可用缩放倍数 >= 1，直接使用
+			if (max >= 1.f) {
+				break;
+			}
+			// 否则继续执行下一个模式
+			// Fall through
+	
+		case SM_AF:
+			// 宽高比适应模式（Aspect Fit）
+			// 保持宽高比，画面完整显示
+			if (aspectX > aspectY) {
+				max = 1.f / aspectX;
+			} else {
+				max = 1.f / aspectY;
+			}
+			break;
+	
+		case SM_SF:
+			// 拉伸填满模式（Stretch Fill）
+			// 不保持宽高比，完全填充屏幕
+			aspectX = 1.f;
+			aspectY = 1.f;
+			break;
+		}
+	
+		// 如果不是拉伸填满模式
+		if (screenMode != SM_SF) {
+	
+			// 重新基于实际纹理尺寸计算宽高比例
+			aspectX = width / (float) vwidth;
+			aspectY = height / (float) vheight;
+		}
+	
+		// if (SM_PA == screenMode)
+		// {
+		// 	if(runner->core->platform(runner->core) == mPLATFORM_GB)
+		// 	{
+		// 		// GB/GBC 的像素精确模式 适配部分滤镜
+		// 		aspectX = 1120.0f/1920.0f;
+		// 		aspectY = 1008.0f/1080.0f;
+		// 		max = 1.0f;
+		// 	}
+		// }
+		// 应用最终缩放因子
+		aspectX *= max;
+		aspectY *= max;
+		glUniform2f(dimsLocation, aspectX, aspectY);
+	}
 
 	// 如果使用 PBO（Pixel Buffer Object）
 	if (usePbo) {
@@ -632,13 +654,7 @@ static void _drawTex(
 	// 关闭混合
 	glDisable(GL_BLEND);
 
-	// 恢复 GUI 原始视口大小
-	glViewport(
-		0,
-		1080 - runner->params.height,
-		runner->params.width,
-		runner->params.height
-	);
+
 }
 
 
@@ -830,7 +846,6 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 	// 获取期望的视频尺寸
 	unsigned width, height;
 	runner->core->desiredVideoDimensions(runner->core, &width, &height);
-
 	glActiveTexture(GL_TEXTURE0);
 	if (usePbo) {
 		// 上传像素缓冲数据到纹理
@@ -843,17 +858,76 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 	} else if (!interframeBlending) {
 		glBindTexture(GL_TEXTURE_2D, tex);
 	}
-
-	// 如果启用帧间混合，先绘制淡化的前一帧，再绘制当前帧
-	if (interframeBlending) {
-		glBindTexture(GL_TEXTURE_2D, oldTex);
-		_drawTex(runner, width, height, faded, false);
-		glBindTexture(GL_TEXTURE_2D, tex);
-		_drawTex(runner, width, height, faded, true);
-	} else {
-		_drawTex(runner, width, height, faded, false);
+	int isShaderEnabled = 0;
+	BK_GLOBAL_INT_GET(BK_META_SHADER_ENABLE, isShaderEnabled);
+	int isMaskEnabled = 0;
+	BK_GLOBAL_INT_GET(BK_META_MASK_ENABLE, isMaskEnabled);
+	if(!isShaderEnabled || bk_global_shader_index < 0)
+	{
+		// glViewport(0, 1080 - vheight , vwidth, vheight);
+		glViewport(0, 1080 - vheight - (isMaskEnabled?bk_Normal_offset(runner, height, vheight):0) , vwidth, vheight);
+		// 如果启用帧间混合，先绘制淡化的前一帧，再绘制当前帧
+		if (interframeBlending) {
+			glBindTexture(GL_TEXTURE_2D, oldTex);
+			_drawTex(runner, width, height, faded, false);
+			glBindTexture(GL_TEXTURE_2D, tex);
+			_drawTex(runner, width, height, faded, true);
+		} else {
+			_drawTex(runner, width, height, faded, false);
+		}
 	}
+	else
+	{
+		bk_switch_to_fbo(runner, true, 0);
+		glViewport(0, 0, width, height);
+		// 如果启用帧间混合，先绘制淡化的前一帧，再绘制当前帧
+		if (interframeBlending) {
+			glBindTexture(GL_TEXTURE_2D, oldTex);
+			_drawTex(runner, width, height, faded, false);
+			glBindTexture(GL_TEXTURE_2D, tex);
+			_drawTex(runner, width, height, faded, true);
+		} else {
+			_drawTex(runner, width, height, faded, false);
+		}
+	
+		bk_switch_to_fbo(runner, false, 0);
 
+		float aspectX = width / (float) vwidth;
+		float aspectY = height / (float) vheight;
+		float max = 1.f;
+		switch (screenMode) {
+		case SM_PA:
+			max = (float)g_cur_screen_aspect_ratio;
+			if (max >= 1.f) {
+				break;
+			}
+		case SM_AF:
+			if (aspectX > aspectY) {
+				max = 1.f / (float) aspectX;
+			} else {
+				max = 1.f / (float) aspectY;
+			}
+			break;
+		case SM_SF:
+			aspectX = 1.f;
+			aspectY = 1.f;
+			break;
+		}
+		if (screenMode != SM_SF) {
+			aspectX = width / (float) vwidth;
+			aspectY = height / (float) vheight;
+		}
+		aspectX *= max;
+		aspectY *= max;
+
+		bk_render_fbo(runner, width, height, aspectX, aspectY);
+	}
+	glViewport(
+		0,
+		1080 - runner->params.height,
+		runner->params.width,
+		runner->params.height
+	);
 	// 处理振动反馈
 	HidVibrationValue values[4];
 	if (rumble.up) {
@@ -930,6 +1004,8 @@ static bool _running(struct mGUIRunner* runner) {
 			vheight = 720;
 		}
 		nwindowSetCrop(nwindowGetDefault(), 0, 0, vwidth, vheight);
+		g_view_width = vwidth;
+		g_view_height = vheight;
 		vmode = newMode;
 	}
 
@@ -1129,6 +1205,7 @@ static void glInit(void) {
 	glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 
+
 	// 编译着色器程序
 	program = glCreateProgram();
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
@@ -1177,6 +1254,7 @@ static void glInit(void) {
 	colorLocation = glGetUniformLocation(program, "color");
 	dimsLocation = glGetUniformLocation(program, "dims");
 	insizeLocation = glGetUniformLocation(program, "insize");
+	brightnessLocation = glGetUniformLocation(program, "Brightness");
 	GLuint offsetLocation = glGetAttribLocation(program, "offset");
 
 	// 创建顶点缓冲和数组对象
@@ -1277,7 +1355,8 @@ int main(int argc, char* argv[]) {
 		vheight = 720;
 	}
 	nwindowSetCrop(window, 0, 0, vwidth, vheight);
-
+	g_view_width = vwidth;
+	g_view_height = vheight;
 	// 初始化OpenGL和手柄
 	glInit();
 
@@ -1362,8 +1441,8 @@ int main(int argc, char* argv[]) {
 				.submenu = 0,
 				.state = SM_PA,
 				.validStates = (const char*[]) {
-					"精确像素(Pixel-Accurate)",
-					"按比例填充(Aspect-Ratio Fit)",
+					"整数缩放(Pixel-Accurate)",
+					"按比例填充屏幕(Aspect-Ratio Fit)",
 					"全屏拉伸(Stretched)",
 				},
 				.nStates = 3
@@ -1514,6 +1593,7 @@ int main(int argc, char* argv[]) {
 	mkdir(BK_CONFIG_BASE_PATH, 0755);
 	mkdir(BK_BACKGROUND_BASE_PATH, 0755);
 	mkdir(BK_OVERLAY_BASE_PATH, 0755);
+	mkdir(BK_SHADER_BASE_PATH, 0755);
 	if (!bk_config_init()) {
         printf("配置管理器初始化失败\n");
         return 1;
@@ -1526,11 +1606,15 @@ int main(int argc, char* argv[]) {
 	const char* current_gba = mCoreConfigGetValue(&runner.config, BK_META_MASK_GBA);
 	if(current_gba){
 		bk_init_mask_texture(current_gba, 0);
+		g_gba_video_offset_y = bk_Mask_OffsetRead(current_gba);
 	}
 	const char* current_gbc = mCoreConfigGetValue(&runner.config, BK_META_MASK_GBC);
 	if(current_gbc){
 		bk_init_mask_texture(current_gbc, 1);
+		g_gbc_video_offset_y = bk_Mask_OffsetRead(current_gbc);
 	}
+
+
 	int isBgEnabled = 0;
 	BK_GLOBAL_INT_GET(BK_META_PATH_BACKGROUND_ENABLE, isBgEnabled);
 	const char* current_bg = mCoreConfigGetValue(&runner.config, BK_META_PATH_BACKGROUND);
@@ -1554,6 +1638,21 @@ int main(int argc, char* argv[]) {
 	BK_GLOBAL_INT_GET(BK_META_HOVER_TEXT_COLOR_TYPE, hoverColorType);
 	BK_COLOR_TEXT_SELECT_SET(hoverColorType);
 
+	// 初始化滤镜
+	bk_shader_list_init();
+	int isShaderEnabled = 0;
+	BK_GLOBAL_INT_GET(BK_META_SHADER_ENABLE, isShaderEnabled);
+	if(isShaderEnabled){
+		printf("滤镜功能开，初始化滤镜管理器\n");
+		const char* shaderName = mCoreConfigGetValue(&runner.config, BK_META_SHADER_NAME);
+		if(shaderName && shaderName[0]){
+			bk_shader_cur_index_set(shaderName);
+			printf("当前滤镜：%s\n", shaderName);
+		}else{
+			bk_global_shader_index = -1;
+			printf("未设置当前滤镜\n");
+		}
+	}
 
 	
 	// ===================beiklive
@@ -1582,6 +1681,7 @@ int main(int argc, char* argv[]) {
 
 	glDeinit();
 	bk_opengl_deinit();
+	bk_shader_list_deinit();
 
 	hidTeardown();
 

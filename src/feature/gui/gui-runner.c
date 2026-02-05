@@ -329,6 +329,7 @@ void mGUIInit(struct mGUIRunner* runner, const char* port) {
 	mCoreConfigSetDefaultIntValue(&runner->config, BK_META_HOVER_TEXT_COLOR_TYPE, BK_CONFIG_COLOR_BLUE);
 	mCoreConfigSetDefaultIntValue(&runner->config, BK_META_ISFOLDER, true);
 	mCoreConfigSetDefaultIntValue(&runner->config, BK_META_MASK_ENABLE, false);
+	mCoreConfigSetDefaultIntValue(&runner->config, BK_META_SHADER_ENABLE, false);
 	mCoreConfigSetDefaultIntValue(&runner->config, BK_META_PATH_BACKGROUND_ENABLE, false);
 	mCoreConfigSetDefaultIntValue(&runner->config, BK_META_CONFIG_THEME, BK_THEME_DEFAULT);
 
@@ -615,6 +616,17 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 	MutexUnlock(&runner->autosave.mutex);
 #endif
 
+	if (runner->core->platform(runner->core) == mPLATFORM_GBA)
+	{
+		bk_init_fbo(BK_GBA_WIDTH, BK_GBA_HEIGHT);
+	}
+	else
+	{
+		bk_init_fbo(BK_GBC_WIDTH, BK_GBC_HEIGHT);
+	}
+
+
+
 	if (runner->gameLoaded) {
 		runner->gameLoaded(runner);  // 加载游戏
 	}
@@ -841,6 +853,9 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 		mCoreConfigGetIntValue(&runner->config, "showOSD", &showOSD);
 		mCoreConfigGetIntValue(&runner->config, "mute", &mute);
 		mCoreConfigGetIntValue(&runner->config, "fastForwardMute", &fastForwardMute);
+
+
+
 #ifdef M_CORE_GB
 		if (runner->core->platform(runner->core) == mPLATFORM_GB) {
 			runner->core->reloadConfigOption(runner->core, "gb.pal", &runner->config);
@@ -890,6 +905,7 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 	GUIMenuItemListDeinit(&pauseMenu.items);
 	GUIMenuItemListDeinit(&stateSaveMenu.items);
 	GUIMenuItemListDeinit(&stateLoadMenu.items);
+
 	mLOG(GUI_RUNNER, INFO, "Game stopped!");
 }
 
@@ -925,6 +941,10 @@ void mGUIRunloop(struct mGUIRunner* runner) {
 		BK_GLOBAL_INT_SET(BK_META_ISFOLDER, false);
 		mCoreConfigSave(&runner->config);
 		
+
+
+
+
 		mGUIRun(runner, path); 
 	}
 }
