@@ -439,6 +439,26 @@ static void _gameLoaded(struct mGUIRunner* runner) {
 			}
 		}
 	}
+	// 读取倒带配置
+    mCoreConfigGetIntValue(&runner->config, BK_META_REWIND_ENABLE, (int*)&runner->rewindEnabled);
+    mCoreConfigGetIntValue(&runner->config, BK_META_REWIND_MUTE_ENABLE, (int*)&runner->rewindMuteEnabled);
+    mCoreConfigGetIntValue(&runner->config, BK_META_REWIND_BUFFER_SIZE, &runner->rewindBufferSize);
+    mCoreConfigGetIntValue(&runner->config, BK_META_REWIND_SAVE_INTERVAL, &runner->rewindSaveInterval);
+	// 判断倒带从不启用到启用
+	if (runner->rewindEnabled && !g_game_rewind_enable)
+	{
+		g_game_rewind_enable = runner->rewindEnabled;
+		if(runner->rewindEnabled)
+		{
+			bk_rewind_init(runner);
+		}
+	}
+
+	if(!runner->rewindEnabled && g_game_rewind_enable)
+	{
+		bk_rewind_deinit(runner);
+		g_game_rewind_enable = false;
+	}
 
 	// 读取亮度值和屏幕
 	int maxBrightness = 5;
@@ -1661,6 +1681,8 @@ int main(int argc, char* argv[]) {
 			printf("未设置当前滤镜\n");
 		}
 	}
+	// 读取rewind功能开关
+    mCoreConfigGetIntValue(&runner.config, BK_META_REWIND_ENABLE, &g_game_rewind_enable);
 
 	
 	// ===================beiklive

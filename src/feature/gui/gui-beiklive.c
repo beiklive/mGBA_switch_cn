@@ -27,8 +27,8 @@ enum BKGUIAction {
 	BK_CONFIG_SCREEN,
 	BK_CONFIG_UNIFORM,
 	BK_CONFIG_BACKGROUND,
-	BK_CONFIG_SAVE,
-	BK_CONFIG_SAVE2
+	BK_CONFIG_REWIND,
+	BK_CONFIG_SAVE
 };
 
 static void ReadStateConfig(struct GUIMenu* menu, struct mGUIRunner* runner) {
@@ -99,6 +99,108 @@ static void ReadStateConfig(struct GUIMenu* menu, struct mGUIRunner* runner) {
 	}
 }
 
+void mGUIRewindSet(struct mGUIRunner* runner) {
+	struct GUIMenu menu = { .title = "倒带设置",
+		                    .background = &runner->background.d,
+		                    .index = 0 };
+	GUIMenuItemListInit(&menu.items, 0);
+	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) { 
+		.title = "是否启用倒带功能",
+		.data = GUI_V_S(BK_META_REWIND_ENABLE),
+		.submenu = 0,
+		.state = 0,
+		.validStates = (const char*[]) { "不启用", "启用" },
+		.nStates = 2 
+	};
+	// 倒带缓冲区大小
+	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+		.title = "倒带缓冲区大小",
+		.data = GUI_V_S(BK_META_REWIND_BUFFER_SIZE),
+		.submenu = 0,
+		.state = 0,
+		.validStates = (const char*[]) { "60帧", "120帧", "180帧", "300帧", "600帧", "900帧", "1800帧", "3600帧"},
+		.stateMappings = (const struct GUIVariant[]) { GUI_V_U(60), GUI_V_U(120), GUI_V_U(180),
+		                                              GUI_V_U(300), GUI_V_U(600), GUI_V_U(900),
+		                                              GUI_V_U(1800), GUI_V_U(3600) },
+		.nStates = 8
+	};
+	// 倒带保存间隔
+	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+		.title = "倒带保存间隔",
+		.data = GUI_V_S(BK_META_REWIND_SAVE_INTERVAL),
+		.submenu = 0,
+		.state = 0,
+		.validStates = (const char*[]) { "每1帧", "每2帧", "每3帧", "每5帧", "每10帧", "每30帧"},
+		.stateMappings = (const struct GUIVariant[]) { GUI_V_U(1), GUI_V_U(2), GUI_V_U(3),
+		                                              GUI_V_U(5), GUI_V_U(10), GUI_V_U(30) },
+		.nStates = 6
+	};
+	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) { 
+		.title = "倒带时静音",
+		.data = GUI_V_S(BK_META_REWIND_MUTE_ENABLE),
+		.submenu = 0,
+		.state = 0,
+		.validStates = (const char*[]) { "不启用", "启用" },
+		.nStates = 2 
+	};
+	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+		.title = "保存修改",
+		.data = GUI_V_U(BK_CONFIG_SAVE),
+	};
+	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+		.title = "返回",
+		.data = GUI_V_V,
+	};
+	ReadStateConfig(&menu, runner);
+	while (true) {
+		struct GUIMenuItem* item;
+		enum GUIMenuExitReason reason = GUIShowMenu(&runner->params, &menu, &item);
+
+		if (reason != GUI_MENU_EXIT_ACCEPT || GUIVariantIsVoid(item->data)) {
+			GUIMenuItemListClear(&menu.items);
+			break;
+		}
+		enum BKGUIAction action = (enum BKGUIAction) item->data.v.u;
+		if (action == BK_CONFIG_SAVE) {
+			for (int i = 0; i < GUIMenuItemListSize(&menu.items); ++i) {
+				item = GUIMenuItemListGetPointer(&menu.items, i);
+				if (!item->validStates || !GUIVariantIsString(item->data)) {
+					continue;
+				}
+				if (item->stateMappings) {
+					const struct GUIVariant* v = &item->stateMappings[item->state];
+					switch (v->type) {
+					case GUI_VARIANT_VOID:
+						mCoreConfigSetValue(&runner->config, item->data.v.s, NULL);
+						break;
+					case GUI_VARIANT_UNSIGNED:
+						mCoreConfigSetUIntValue(&runner->config, item->data.v.s, v->v.u);
+						break;
+					case GUI_VARIANT_INT:
+						mCoreConfigSetUIntValue(&runner->config, item->data.v.s, v->v.i);
+						break;
+					case GUI_VARIANT_FLOAT:
+						mCoreConfigSetFloatValue(&runner->config, item->data.v.s, v->v.f);
+						break;
+					case GUI_VARIANT_STRING:
+						mCoreConfigSetValue(&runner->config, item->data.v.s, v->v.s);
+						break;
+					case GUI_VARIANT_POINTER:
+						break;
+					}
+				} else {
+					mCoreConfigSetUIntValue(&runner->config, item->data.v.s, item->state);
+				}
+			}
+			mCoreConfigSave(&runner->config);
+			mCoreLoadForeignConfig(runner->core, &runner->config);
+			GUIShowMessageBox(&runner->params, GUI_MESSAGE_BOX_OK, 240, "保存完成!");
+			break;
+		}
+	}
+	GUIMenuItemListDeinit(&menu.items);
+
+}
 void mGUIScreenSet(struct mGUIRunner* runner) {
 	struct GUIMenu menu = { .title = "画面相关参数设置",
 		                    .background = &runner->background.d,
@@ -811,6 +913,10 @@ void mGUIShowBeiklive(struct mGUIRunner* runner) {
 		.data = GUI_V_U(BK_CONFIG_SCREEN),
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+		.title = "倒带设置",
+		.data = GUI_V_U(BK_CONFIG_REWIND),
+	};
+	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
 		.title = "保存修改",
 		.data = GUI_V_U(BK_CONFIG_SAVE),
 	};
@@ -845,6 +951,9 @@ void mGUIShowBeiklive(struct mGUIRunner* runner) {
 			break;
 		case BK_CONFIG_SHADER:
 			mGUIShaderSet(runner);
+			break;
+		case BK_CONFIG_REWIND:
+			mGUIRewindSet(runner);
 			break;
 		case BK_CONFIG_SCREEN:
 			mGUIScreenSet(runner);

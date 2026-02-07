@@ -49,6 +49,7 @@ float g_cur_screen_brightness = 1.0f;
 int g_gba_video_offset_y = 0;
 int g_gbc_video_offset_y = 0;
 
+int g_game_rewind_enable = 0;
 
 #define MAX_PASSES 8
 
@@ -2082,5 +2083,18 @@ int bk_Normal_offset(struct mGUIRunner* runner, int height, int vheight){
 	}else{
 		return renderY - g_gba_video_offset_y;
 		
+	}
+}
+
+
+void bk_draw_mask(struct mGUIRunner* runner)
+{
+	int isMaskEnabled = 0;
+	BK_GLOBAL_INT_GET(BK_META_MASK_ENABLE, isMaskEnabled);
+	if(isMaskEnabled)
+	{
+		// 获取平台
+		int platform = runner->core->platform(runner->core);
+		runner->drawGameMask(runner, platform);
 	}
 }

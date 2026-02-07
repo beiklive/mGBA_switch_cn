@@ -17,12 +17,14 @@ CXX_GUARD_START
 #include <mgba-util/gui.h>
 #include <mgba-util/threading.h>
 
+#include <beiklive/beiklive.h>
+
 enum mGUIInput {
 	mGUI_INPUT_INCREASE_BRIGHTNESS = GUI_INPUT_USER_START,
 	mGUI_INPUT_DECREASE_BRIGHTNESS,
 	mGUI_INPUT_SCREEN_MODE,
 	mGUI_INPUT_SCREENSHOT,
-	mGUI_INPUT_REWIND_HELD,
+	mGUI_INPUT_REWIND_HOLD,
 	mGUI_INPUT_FAST_FORWARD_HELD,
 	mGUI_INPUT_FAST_FORWARD_TOGGLE,
 	mGUI_INPUT_MUTE_TOGGLE,
@@ -72,6 +74,19 @@ struct mGUIRunner {
 	size_t nConfigExtra;
 
 	struct GUIInputKeys* keySources;
+
+    // 倒带相关
+    struct mCoreRewindContext rewind;       // 倒带上下文
+    bool rewinding;                         // 当前是否正在倒带
+    bool rewindEnabled;                     // 倒带功能是否启用
+    bool rewindMuteEnabled;                 // 倒带静音功能是否启用
+    int rewindBufferSize;                   // 倒带缓冲区大小（帧数）
+    int rewindSaveInterval;                 // 保存间隔（每N帧保存一次）
+    unsigned rewindFrames;                  // 已保存的帧数
+                
+    // 用于倒带状态显示
+    bool rewindPaused;                      // 倒带时是否暂停
+    int rewindShowStatus;                      // 倒带时是否暂停
 
 	const char* port;
 	float fps;

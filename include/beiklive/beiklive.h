@@ -8,6 +8,8 @@
 #include <mgba-util/png-io.h>
 #include <mgba-util/vfs.h>
 
+#include <mgba/core/rewind.h>
+
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
 #include <GLES3/gl31.h>
@@ -38,6 +40,9 @@ extern float g_cur_screen_brightness;
 
 extern int g_gba_video_offset_y;
 extern int g_gbc_video_offset_y;
+
+
+extern int g_game_rewind_enable;
 
 // 主题相关偏移
 #define BK_TITLE_TOP_OFFSET 80
@@ -114,6 +119,10 @@ extern uint32_t g_bk_color_text;
 #define BK_META_GBA_ASPECT_RATIO                "BK.config.gba.aspectRatio"
 #define BK_META_GBC_ASPECT_RATIO                "BK.config.gbc.aspectRatio"
 
+#define BK_META_REWIND_ENABLE                   "BK.rewind.enable" // 是否启用回放
+#define BK_META_REWIND_BUFFER_SIZE               "BK.rewind.buffer.size" // 回放缓冲区大小
+#define BK_META_REWIND_SAVE_INTERVAL             "BK.rewind.save.interval" // 回放保存间隔
+#define BK_META_REWIND_MUTE_ENABLE             "BK.rewind.mute.enable" // 回放静音
 
 // 程序当前状态（列表 菜单  游戏）
 enum BK_RUNNING_TYPE {
@@ -251,6 +260,8 @@ void bk_opengl_deinit(void);
 void bk_init_mask_texture(const char* filepath, int maskType);
 int bk_init_menu_background(const char* filepath);
 
+
+void bk_draw_mask(struct mGUIRunner* runner);
 // +++++++++++++++++++shader相关定义++++++++++++++++++++++++++++++
 union mBKGLES2UniformValue {
 	GLfloat f;
@@ -360,5 +371,32 @@ extern bool useFBO;
 void bk_init_fbo(int width, int height);
 void bk_switch_to_fbo(struct mGUIRunner* runner, bool enable, int passIndex);
 void bk_render_fbo(struct mGUIRunner* runner, int width, int height, float aspectX, float aspectY);
+
+
+
+// ======================== 倒带相关定义 ==========
+
+#define REWIND_BUFFER_DEFAULT 300       // 默认倒带缓冲区
+#define REWIND_SAVE_INTERVAL_DEFAULT 1  // 默认每帧保存
+
+bool bk_rewind_init(struct mGUIRunner* runner);
+bool bk_performRewind(struct mGUIRunner* runner);
+void bk_saveRewindState(struct mGUIRunner* runner);
+
+void bk_rewind_deinit(struct mGUIRunner* runner);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #endif

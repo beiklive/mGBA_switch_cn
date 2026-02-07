@@ -66,7 +66,7 @@ static const struct mInputPlatformInfo _mGUIKeyInfo = {
 		[mGUI_INPUT_DECREASE_BRIGHTNESS] = "减弱太阳光亮度",
 		[mGUI_INPUT_SCREEN_MODE] = "切换屏幕模式",
 		[mGUI_INPUT_SCREENSHOT] = "截图",
-		[mGUI_INPUT_REWIND_HELD] = "倒带 (按住)",
+		[mGUI_INPUT_REWIND_HOLD] = "倒带 (按住)",
 		[mGUI_INPUT_FAST_FORWARD_HELD] = "加速 (按住)",
 		[mGUI_INPUT_FAST_FORWARD_TOGGLE] = "加速 (切换)",
 		[mGUI_INPUT_MUTE_TOGGLE] = "静音 (切换)",
@@ -135,9 +135,6 @@ static void _drawBackground(struct GUIBackground* background, void* context) {
 			gbaBackground->p->drawFrame(gbaBackground->p, true);
 		}
 	}
-
-
-
 }
 
 // BKMARK 保存和读取状态的背景绘制函数(画存档截图)
@@ -333,6 +330,22 @@ void mGUIInit(struct mGUIRunner* runner, const char* port) {
 	mCoreConfigSetDefaultIntValue(&runner->config, BK_META_SHADER_ENABLE, false);
 	mCoreConfigSetDefaultIntValue(&runner->config, BK_META_PATH_BACKGROUND_ENABLE, false);
 	mCoreConfigSetDefaultIntValue(&runner->config, BK_META_CONFIG_THEME, BK_THEME_DEFAULT);
+    // 初始化倒带相关变量
+    runner->rewindEnabled = false;      // 默认禁用，由配置决定
+    runner->rewindMuteEnabled = false;      // 默认禁用，由配置决定
+    runner->rewindBufferSize = REWIND_BUFFER_DEFAULT;
+    runner->rewindSaveInterval = REWIND_SAVE_INTERVAL_DEFAULT;
+    runner->rewinding = false;
+    runner->rewindFrames = 0;
+    runner->rewindPaused = false;
+    
+    // 设置倒带配置默认值
+    mCoreConfigSetDefaultIntValue(&runner->config, BK_META_REWIND_ENABLE, 0);
+    mCoreConfigSetDefaultIntValue(&runner->config, BK_META_REWIND_MUTE_ENABLE, 0);
+    mCoreConfigSetDefaultIntValue(&runner->config, BK_META_REWIND_BUFFER_SIZE, REWIND_BUFFER_DEFAULT);
+    mCoreConfigSetDefaultIntValue(&runner->config, BK_META_REWIND_SAVE_INTERVAL, REWIND_SAVE_INTERVAL_DEFAULT);
+
+
 
 
 	mCoreConfigSetDefaultIntValue(&runner->config, "volume", 0x100);
@@ -616,6 +629,13 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 	runner->autosave.core = runner->core;
 	MutexUnlock(&runner->autosave.mutex);
 #endif
+    mCoreConfigGetIntValue(&runner->config, BK_META_REWIND_ENABLE, 			(int*)&runner->rewindEnabled);
+    mCoreConfigGetIntValue(&runner->config, BK_META_REWIND_MUTE_ENABLE, 			(int*)&runner->rewindMuteEnabled);
+    mCoreConfigGetIntValue(&runner->config, BK_META_REWIND_BUFFER_SIZE, 	&runner->rewindBufferSize);
+    mCoreConfigGetIntValue(&runner->config, BK_META_REWIND_SAVE_INTERVAL,	&runner->rewindSaveInterval);
+    
+    // 初始化倒带系统
+	bk_rewind_init(runner);
 
 	if (runner->core->platform(runner->core) == mPLATFORM_GBA)
 	{
@@ -634,6 +654,9 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 	mLOG(GUI_RUNNER, INFO, "Game starting");
 	runner->fps = 0;
 	bool fastForward = false;
+	bool rewinding = false;      // 倒带状态
+	bool rewindPreviousFastForward = false;;      // 倒带前的加速切换状态
+
 	while (running) {
 		CircleBufferClear(&runner->fpsBuffer);
 		runner->totalDelta = 0;
@@ -681,6 +704,7 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 			}
 			if (guiKeys & (1 << mGUI_INPUT_FAST_FORWARD_TOGGLE)) {
 				fastForward = !fastForward;
+				rewindPreviousFastForward = fastForward;
 			}
 			bool fastForwarding = fastForward || (heldKeys & (1 << mGUI_INPUT_FAST_FORWARD_HELD));
 			if (runner->setFrameLimiter) {
@@ -700,31 +724,71 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 					}
 				}
 			}
-			bool rewinding = heldKeys & (1 << mGUI_INPUT_REWIND_HELD);
-			if (rewinding) {
-				printf("倒带中...\n");
+
+			if (runner->rewindEnabled) {
+				// 处理按住倒带
+				bool rewindHeld = (heldKeys & (1 << mGUI_INPUT_REWIND_HOLD));
+				
+				if (rewindHeld && !runner->rewinding) {
+					// 开始倒带
+					runner->rewinding = true;
+					runner->rewindPaused = false;
+					fastForward = false;
+
+					if (runner->rewindEnabled) {
+						mCoreConfigSetUIntValue(&runner->core->config, "mute", runner->rewindEnabled);
+						runner->core->reloadConfigOption(runner->core, "mute", NULL);
+					}
+
+					if (runner->setFrameLimiter) {
+						runner->setFrameLimiter(runner, true);
+					}
+				} else if (!rewindHeld && runner->rewinding) {
+					// 停止倒带
+					runner->rewinding = false;
+					runner->rewindPaused = true;
+
+					// 恢复之前的加速状态
+            		fastForward = rewindPreviousFastForward;
+
+					if (runner->rewindEnabled) {
+						mCoreConfigSetUIntValue(&runner->core->config, "mute", mute);
+						runner->core->reloadConfigOption(runner->core, "mute", NULL);
+					}
+				}
 			}
 
+			if (runner->rewinding && runner->rewindEnabled && !runner->rewindPaused) {
+				bool success = bk_performRewind(runner);
+				
+				if (!success) {
+					runner->rewindPaused = true;
+					GUIShowMessageBox(&runner->params, GUI_MESSAGE_BOX_OK, 240, 
+									"已达到倒带末尾，无法继续倒带");
+				}
+				
+				// 跳过正常帧运行逻辑，但需要继续处理输入
+				continue;
+			} else {
+				// 正常游戏运行时保存状态
+				if (runner->rewindEnabled && !runner->rewinding) {
+					bk_saveRewindState(runner);
+				}
+			}
 			uint16_t keys = runner->pollGameInput(runner);
 			if (runner->prepareForFrame) {
 				runner->prepareForFrame(runner);
 			}
-			runner->core->setKeys(runner->core, keys);
-			runner->core->runFrame(runner->core);
+			runner->core->setKeys(runner->core, keys);  // 发送操作给游戏核心
+			runner->core->runFrame(runner->core);	// 执行游戏帧
+
 			// 绘制游戏画面
 			if (runner->drawFrame) {
 				runner->params.drawStart();  // 清空背景
 				
 				runner->drawFrame(runner, false);
 				// ========== 添加遮罩绘制 ==========
-				int isMaskEnabled = 0;
-				BK_GLOBAL_INT_GET(BK_META_MASK_ENABLE, isMaskEnabled);
-				if(isMaskEnabled)
-				{
-					// 获取平台
-					int platform = runner->core->platform(runner->core);
-					runner->drawGameMask(runner, platform);
-				}
+				bk_draw_mask(runner);
 				// ========== 遮罩绘制结束 ==========
 				
 				if (showOSD || drawFps) {// 绘制OSD和FPS
@@ -877,6 +941,8 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 	runner->autosave.core = NULL;
 	MutexUnlock(&runner->autosave.mutex);
 #endif
+
+    bk_rewind_deinit(runner);
 
 	int autosave = false;
 	mCoreConfigGetIntValue(&runner->config, "autosave", &autosave);
