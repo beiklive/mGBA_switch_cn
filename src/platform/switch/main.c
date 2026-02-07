@@ -441,7 +441,7 @@ static void _gameLoaded(struct mGUIRunner* runner) {
 	}
 	// 读取倒带配置
     mCoreConfigGetIntValue(&runner->config, BK_META_REWIND_ENABLE, (int*)&runner->rewindEnabled);
-    mCoreConfigGetIntValue(&runner->config, BK_META_REWIND_MUTE_ENABLE, (int*)&runner->rewindMuteEnabled);
+    // mCoreConfigGetIntValue(&runner->config, BK_META_REWIND_MUTE_ENABLE, (int*)&runner->rewindMuteEnabled);
     mCoreConfigGetIntValue(&runner->config, BK_META_REWIND_BUFFER_SIZE, &runner->rewindBufferSize);
     mCoreConfigGetIntValue(&runner->config, BK_META_REWIND_SAVE_INTERVAL, &runner->rewindSaveInterval);
 	// 判断倒带从不启用到启用

@@ -135,14 +135,14 @@ void mGUIRewindSet(struct mGUIRunner* runner) {
 		                                              GUI_V_U(5), GUI_V_U(10), GUI_V_U(30) },
 		.nStates = 6
 	};
-	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) { 
-		.title = "倒带时静音",
-		.data = GUI_V_S(BK_META_REWIND_MUTE_ENABLE),
-		.submenu = 0,
-		.state = 0,
-		.validStates = (const char*[]) { "不启用", "启用" },
-		.nStates = 2 
-	};
+	// *GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) { 
+	// 	.title = "倒带时静音",
+	// 	.data = GUI_V_S(BK_META_REWIND_MUTE_ENABLE),
+	// 	.submenu = 0,
+	// 	.state = 0,
+	// 	.validStates = (const char*[]) { "不启用", "启用" },
+	// 	.nStates = 2 
+	// };
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
 		.title = "保存修改",
 		.data = GUI_V_U(BK_CONFIG_SAVE),

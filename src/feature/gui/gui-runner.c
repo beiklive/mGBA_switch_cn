@@ -341,7 +341,7 @@ void mGUIInit(struct mGUIRunner* runner, const char* port) {
     
     // 设置倒带配置默认值
     mCoreConfigSetDefaultIntValue(&runner->config, BK_META_REWIND_ENABLE, 0);
-    mCoreConfigSetDefaultIntValue(&runner->config, BK_META_REWIND_MUTE_ENABLE, 0);
+    // mCoreConfigSetDefaultIntValue(&runner->config, BK_META_REWIND_MUTE_ENABLE, 0);
     mCoreConfigSetDefaultIntValue(&runner->config, BK_META_REWIND_BUFFER_SIZE, REWIND_BUFFER_DEFAULT);
     mCoreConfigSetDefaultIntValue(&runner->config, BK_META_REWIND_SAVE_INTERVAL, REWIND_SAVE_INTERVAL_DEFAULT);
 
@@ -630,7 +630,7 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 	MutexUnlock(&runner->autosave.mutex);
 #endif
     mCoreConfigGetIntValue(&runner->config, BK_META_REWIND_ENABLE, 			(int*)&runner->rewindEnabled);
-    mCoreConfigGetIntValue(&runner->config, BK_META_REWIND_MUTE_ENABLE, 			(int*)&runner->rewindMuteEnabled);
+    // mCoreConfigGetIntValue(&runner->config, BK_META_REWIND_MUTE_ENABLE, 			(int*)&runner->rewindMuteEnabled);
     mCoreConfigGetIntValue(&runner->config, BK_META_REWIND_BUFFER_SIZE, 	&runner->rewindBufferSize);
     mCoreConfigGetIntValue(&runner->config, BK_META_REWIND_SAVE_INTERVAL,	&runner->rewindSaveInterval);
     
@@ -735,14 +735,6 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 					runner->rewindPaused = false;
 					fastForward = false;
 
-					if (runner->rewindEnabled) {
-						mCoreConfigSetUIntValue(&runner->core->config, "mute", runner->rewindEnabled);
-						runner->core->reloadConfigOption(runner->core, "mute", NULL);
-					}
-
-					if (runner->setFrameLimiter) {
-						runner->setFrameLimiter(runner, true);
-					}
 				} else if (!rewindHeld && runner->rewinding) {
 					// 停止倒带
 					runner->rewinding = false;
@@ -750,11 +742,6 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 
 					// 恢复之前的加速状态
             		fastForward = rewindPreviousFastForward;
-
-					if (runner->rewindEnabled) {
-						mCoreConfigSetUIntValue(&runner->core->config, "mute", mute);
-						runner->core->reloadConfigOption(runner->core, "mute", NULL);
-					}
 				}
 			}
 
