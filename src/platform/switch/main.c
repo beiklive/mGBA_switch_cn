@@ -959,9 +959,17 @@ static void _drawScreenshot(struct mGUIRunner* runner, const color_t* pixels, un
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, tex);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-
+	int isMaskEnabled = 0;
+	BK_GLOBAL_INT_GET(BK_META_MASK_ENABLE, isMaskEnabled);
+	glViewport(0, 1080 - vheight - (isMaskEnabled?bk_Normal_offset(runner, height, vheight):0) , vwidth, vheight);
 	// 绘制到屏幕
 	_drawTex(runner, width, height, faded, false);
+	glViewport(
+		0,
+		1080 - runner->params.height,
+		runner->params.width,
+		runner->params.height
+	);
 }
 
 // 轮询游戏输入
