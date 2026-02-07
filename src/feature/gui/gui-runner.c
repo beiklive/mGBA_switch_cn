@@ -139,6 +139,16 @@ static void _drawBackground(struct GUIBackground* background, void* context) {
 
 // BKMARK 保存和读取状态的背景绘制函数(画存档截图)
 static void _drawState(struct GUIBackground* background, void* id) {
+	int useCustomeTheme = false;
+	if(!bk_global_runner)
+		return;
+	mCoreConfigGetIntValue(&bk_global_runner->config, BK_META_CONFIG_THEME, &useCustomeTheme);
+	if (useCustomeTheme == BK_THEME_SWITCH) {
+		if(bk_global_runner->drawBKImage){
+				bk_global_runner->drawBKImage(bk_global_runner, NULL);
+		}
+	}
+
 
 	// 将通用 GUIBackground 转换为 mGBA 专用的背景结构
 	struct mGUIBackground* gbaBackground = (struct mGUIBackground*) background;
@@ -260,12 +270,12 @@ static void _drawState(struct GUIBackground* background, void* id) {
 		}
 
 		// 如果存在 drawFrame 回调，并且该状态截图被标记为无效
-		if (gbaBackground->p->drawFrame &&
-			gbaBackground->screenshotId == (stateId | SCREENSHOT_INVALID)) {
+		// if (gbaBackground->p->drawFrame &&
+		// 	gbaBackground->screenshotId == (stateId | SCREENSHOT_INVALID)) {
 
-			// 回退为绘制当前实时帧作为背景
-			gbaBackground->p->drawFrame(gbaBackground->p, true);
-		}
+		// 	// 回退为绘制当前实时帧作为背景
+		// 	gbaBackground->p->drawFrame(gbaBackground->p, true);
+		// }
 	}
 }
 
@@ -530,9 +540,17 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 	if (runner->params.guiPrepare) {
 		runner->params.guiPrepare();
 	}
-	if(bk_global_runner->drawBKImage){
-			bk_global_runner->drawBKImage(bk_global_runner, NULL);
+
+	int useCustomeTheme = false;
+	if(!bk_global_runner)
+		return;
+	mCoreConfigGetIntValue(&bk_global_runner->config, BK_META_CONFIG_THEME, &useCustomeTheme);
+	if (useCustomeTheme == BK_THEME_SWITCH) {
+		if(bk_global_runner->drawBKImage){
+				bk_global_runner->drawBKImage(bk_global_runner, NULL);
+		}
 	}
+
 	GUIFontPrint(runner->params.font, runner->params.width / 2, (GUIFontHeight(runner->params.font) + runner->params.height) / 2, GUI_ALIGN_HCENTER, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_TEXT, "加载中...");
 	if (runner->params.guiFinish) {
 		runner->params.guiFinish();

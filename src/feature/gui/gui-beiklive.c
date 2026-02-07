@@ -101,6 +101,7 @@ static void ReadStateConfig(struct GUIMenu* menu, struct mGUIRunner* runner) {
 
 void mGUIRewindSet(struct mGUIRunner* runner) {
 	struct GUIMenu menu = { .title = "倒带设置",
+						  .subtitle = "记得在设置里面给倒带映射按键",	
 		                    .background = &runner->background.d,
 		                    .index = 0 };
 	GUIMenuItemListInit(&menu.items, 0);
@@ -886,34 +887,34 @@ void mGUIShowBeiklive(struct mGUIRunner* runner) {
 	GUIMenuItemListInit(&menu.items, 0);
 
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "游戏名称映射",
+		.title = "1. 游戏名称映射",
 		.data = GUI_V_U(BK_CONFIG_MAPNAME),
 	};
 	*GUIMenuItemListAppend(&menu.items) =
-	    (struct GUIMenuItem) { .title = "主题选择",
+	    (struct GUIMenuItem) { .title = "2. 主题选择",
 		                       .data = GUI_V_S(BK_META_CONFIG_THEME),
 		                       .submenu = 0,
 		                       .state = 0,
 		                       .validStates = (const char*[]) { "原版黑白", "自定义风格" },
 		                       .nStates = 2 };
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "主题设置(仅在自定义风格下有效)",
+		.title = "3. 主题设置(仅在自定义风格下有效)",
 		.data = GUI_V_U(BK_CONFIG_BACKGROUND),
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "遮罩设置",
+		.title = "4. 遮罩设置",
 		.data = GUI_V_U(BK_CONFIG_MASK),
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "滤镜设置(整数缩放下效果最佳)",
+		.title = "5. 滤镜设置(整数缩放下效果最佳)",
 		.data = GUI_V_U(BK_CONFIG_SHADER),
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "画面设置",
+		.title = "6. 画面设置",
 		.data = GUI_V_U(BK_CONFIG_SCREEN),
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "倒带设置",
+		.title = "7. 倒带设置",
 		.data = GUI_V_U(BK_CONFIG_REWIND),
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {

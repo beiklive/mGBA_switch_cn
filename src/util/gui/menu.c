@@ -349,8 +349,12 @@ enum GUIMenuExitReason GUIShowMessageBox(struct GUIParams* params, int buttons, 
 		if (params->guiPrepare) {
 			params->guiPrepare();
 		}
-		if(bk_global_runner->drawBKImage){
-			bk_global_runner->drawBKImage(bk_global_runner, NULL);
+		if(!bk_global_runner)
+			break;
+		if (themeType == BK_THEME_SWITCH) {
+			if(bk_global_runner->drawBKImage){
+					bk_global_runner->drawBKImage(bk_global_runner, NULL);
+			}
 		}
 		// 绘制消息弹窗的文字
 		GUIFontPrint(params->font, params->width / 2, (GUIFontHeight(params->font) + params->height) / 2, GUI_ALIGN_HCENTER, themeType == BK_THEME_DEFAULT? BK_COLOR_WHITE : BK_COLOR_TEXT, message);
