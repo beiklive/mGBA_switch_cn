@@ -622,6 +622,8 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 	int fastForwardMute = false;
 	mCoreConfigGetIntValue(&runner->config, "fastForwardMute", &fastForwardMute);
 
+
+
 	bool running = true;
 
 #ifndef DISABLE_THREADING
@@ -656,7 +658,7 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 	bool fastForward = false;
 	bool rewinding = false;      // 倒带状态
 	bool rewindPreviousFastForward = false;;      // 倒带前的加速切换状态
-
+	int framecap = 900;
 	while (running) {
 		CircleBufferClear(&runner->fpsBuffer);
 		runner->totalDelta = 0;
@@ -665,8 +667,10 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 		runner->lastFpsCheck = 1000000LL * tv.tv_sec + tv.tv_usec;
 
 		int frame = 0;
+		int SpeedframeCount = 0;
 		while (running) {
 			BK_GLOBAL_INT_SET(BK_PRO_STATUS, BK_RUNNING_TYPE_GAME);
+			mCoreConfigGetUIntValue(&runner->config, "fastForwardCap", &framecap);
 			if (runner->running) {
 				running = runner->running(runner);
 				if (!running) {
@@ -713,10 +717,14 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 						mCoreConfigSetUIntValue(&runner->core->config, "mute", fastForwardMute);
 						runner->core->reloadConfigOption(runner->core, "mute", NULL);
 					}
+					if(framecap < 900){
+						runner->setFrameLimiter(runner, false);
+					}
 
-					runner->setFrameLimiter(runner, false);
 				} else {
-					runner->setFrameLimiter(runner, true);
+					if(framecap < 900){
+						runner->setFrameLimiter(runner, true);
+					}
 
 					if (fastForwardMute && !mute && !muteTogglePressed) {
 						mCoreConfigSetUIntValue(&runner->core->config, "mute", !fastForwardMute);
@@ -767,7 +775,24 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 				runner->prepareForFrame(runner);
 			}
 			runner->core->setKeys(runner->core, keys);  // 发送操作给游戏核心
-			runner->core->runFrame(runner->core);	// 执行游戏帧
+			
+			if(fastForwarding && framecap == 998) //0.1倍速
+			{
+				if(SpeedframeCount % 10 == 0)
+				{
+					runner->core->runFrame(runner->core);
+				}
+			}
+			else if(fastForwarding && framecap == 999) //0.5倍速
+			{
+				if(SpeedframeCount % 2 == 0)
+				{
+					runner->core->runFrame(runner->core);
+				}
+			}else{
+				runner->core->runFrame(runner->core);	// 执行游戏帧
+			}
+
 
 			// 绘制游戏画面
 			if (runner->drawFrame) {
@@ -806,6 +831,7 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 				runner->params.drawEnd();
 
 				++frame; // 帧数统计
+				++SpeedframeCount;
 				if (frame % FPS_GRANULARITY == 0) {
 					if (drawFps) {
 						struct timeval tv;
@@ -832,6 +858,10 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 				}
 				if (frame == FPS_GRANULARITY * AUTOSAVE_GRANULARITY) {
 					frame = 0;
+				}
+				if(SpeedframeCount >= 1000)
+				{
+					SpeedframeCount = 0;
 				}
 			}
 		}

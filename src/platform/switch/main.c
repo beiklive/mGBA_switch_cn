@@ -1480,12 +1480,14 @@ int main(int argc, char* argv[]) {
 				.data = GUI_V_S("fastForwardCap"),
 				.submenu = 0,
 				.state = 7,
-				.validStates = (const char*[]) {
+				.validStates = (const char*[]) {"0.1", "0.5",
 					"2", "3", "4", "5", "6", "7", "8", "9",
 					"10", "11", "12", "13", "14", "15",
 					"20", "30"
 				},
 				.stateMappings = (const struct GUIVariant[]) {
+					GUI_V_U(998),
+					GUI_V_U(999),
 					GUI_V_U(2),
 					GUI_V_U(3),
 					GUI_V_U(4),
@@ -1503,7 +1505,7 @@ int main(int argc, char* argv[]) {
 					GUI_V_U(20),
 					GUI_V_U(30),
 				},
-				.nStates = 16
+				.nStates = 18
 			},
 			{
 				.title = "纹理过滤",
