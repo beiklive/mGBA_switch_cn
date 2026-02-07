@@ -66,6 +66,7 @@ static const struct mInputPlatformInfo _mGUIKeyInfo = {
 		[mGUI_INPUT_DECREASE_BRIGHTNESS] = "减弱太阳光亮度",
 		[mGUI_INPUT_SCREEN_MODE] = "切换屏幕模式",
 		[mGUI_INPUT_SCREENSHOT] = "截图",
+		[mGUI_INPUT_REWIND_HELD] = "倒带 (按住)",
 		[mGUI_INPUT_FAST_FORWARD_HELD] = "加速 (按住)",
 		[mGUI_INPUT_FAST_FORWARD_TOGGLE] = "加速 (切换)",
 		[mGUI_INPUT_MUTE_TOGGLE] = "静音 (切换)",
@@ -699,6 +700,11 @@ void mGUIRun(struct mGUIRunner* runner, const char* path) {
 					}
 				}
 			}
+			bool rewinding = heldKeys & (1 << mGUI_INPUT_REWIND_HELD);
+			if (rewinding) {
+				printf("倒带中...\n");
+			}
+
 			uint16_t keys = runner->pollGameInput(runner);
 			if (runner->prepareForFrame) {
 				runner->prepareForFrame(runner);

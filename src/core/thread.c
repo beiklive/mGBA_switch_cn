@@ -149,7 +149,7 @@ static void _cancelRequest(struct mCoreThreadInternal* threadContext, enum mCore
 	_pokeRequest(threadContext);
 	ConditionWake(&threadContext->stateCond);
 }
-
+// BKMARK 倒带功能启用
 void _frameStarted(void* context) {
 	struct mCoreThread* thread = context;
 	if (!thread) {
