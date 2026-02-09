@@ -878,14 +878,55 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 	} else if (!interframeBlending) {
 		glBindTexture(GL_TEXTURE_2D, tex);
 	}
+	float aspectX = width / (float) vwidth;
+	float aspectY = height / (float) vheight;
+	float max = 1.f;
+	switch (screenMode) {
+	case SM_PA:
+		max = (float)g_cur_screen_aspect_ratio;
+		if (max >= 1.f) {
+			break;
+		}
+	case SM_AF:
+		if (aspectX > aspectY) {
+			max = 1.f / (float) aspectX;
+		} else {
+			max = 1.f / (float) aspectY;
+		}
+		break;
+	case SM_SF:
+		aspectX = 1.f;
+		aspectY = 1.f;
+		break;
+	}
+	if (screenMode != SM_SF) {
+		aspectX = width / (float) vwidth;
+		aspectY = height / (float) vheight;
+	}
+	aspectX *= max;
+	aspectY *= max;
 	int isShaderEnabled = 0;
 	BK_GLOBAL_INT_GET(BK_META_SHADER_ENABLE, isShaderEnabled);
 	int isMaskEnabled = 0;
 	BK_GLOBAL_INT_GET(BK_META_MASK_ENABLE, isMaskEnabled);
 	if(!isShaderEnabled || bk_global_shader_index < 0)
 	{
-		// glViewport(0, 1080 - vheight , vwidth, vheight);
-		glViewport(0, 1080 - vheight - (isMaskEnabled?bk_Normal_offset(runner, height, vheight):0) , vwidth, vheight);
+		if (screenMode == SM_PA) {
+			// glViewport(0, 1080 - vheight + (isMaskEnabled?bk_Normal_offset(runner, height, vheight):0) , vwidth, vheight);
+			unsigned renderWidth = (unsigned) (aspectX * g_view_width);
+			unsigned renderHeight = (unsigned) (aspectY * g_view_height);
+			unsigned renderX = (g_view_width - renderWidth) / 2;
+			unsigned renderY = (g_view_height - renderHeight) / 2;
+
+			if(runner->core->platform(runner->core) == 1)
+			{
+				glViewport(0, 1080 - g_view_height + (isMaskEnabled?(g_gbc_video_offset_y == -1?0:g_gbc_video_offset_y-renderY):0), g_view_width, g_view_height);
+			}else{
+				glViewport(0, 1080 - g_view_height + (isMaskEnabled?(g_gba_video_offset_y==-1?0:g_gba_video_offset_y-renderY):0), g_view_width, g_view_height);
+			}
+		}else{
+			glViewport(0, 1080 - vheight , vwidth, vheight);
+		}
 		// 如果启用帧间混合，先绘制淡化的前一帧，再绘制当前帧
 		if (interframeBlending) {
 			glBindTexture(GL_TEXTURE_2D, oldTex);
@@ -912,33 +953,7 @@ static void _drawFrame(struct mGUIRunner* runner, bool faded) {
 	
 		bk_switch_to_fbo(runner, false, 0);
 
-		float aspectX = width / (float) vwidth;
-		float aspectY = height / (float) vheight;
-		float max = 1.f;
-		switch (screenMode) {
-		case SM_PA:
-			max = (float)g_cur_screen_aspect_ratio;
-			if (max >= 1.f) {
-				break;
-			}
-		case SM_AF:
-			if (aspectX > aspectY) {
-				max = 1.f / (float) aspectX;
-			} else {
-				max = 1.f / (float) aspectY;
-			}
-			break;
-		case SM_SF:
-			aspectX = 1.f;
-			aspectY = 1.f;
-			break;
-		}
-		if (screenMode != SM_SF) {
-			aspectX = width / (float) vwidth;
-			aspectY = height / (float) vheight;
-		}
-		aspectX *= max;
-		aspectY *= max;
+
 
 		bk_render_fbo(runner, width, height, aspectX, aspectY);
 	}

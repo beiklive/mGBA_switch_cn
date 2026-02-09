@@ -267,9 +267,9 @@ void bk_render_fbo(struct mGUIRunner* runner, int width, int height, float aspec
                 unsigned renderY = (g_view_height - renderHeight) / 2;
                 if(runner->core->platform(runner->core) == 1)
                 {
-                    glViewport(renderX, 1080 - g_view_height + (isMaskEnabled?g_gbc_video_offset_y:renderY), renderWidth, renderHeight);
+                    glViewport(renderX, 1080 - g_view_height + (isMaskEnabled?(g_gbc_video_offset_y == -1?renderY:g_gbc_video_offset_y):renderY), renderWidth, renderHeight);
                 }else{
-                    glViewport(renderX, 1080 - g_view_height + (isMaskEnabled?g_gba_video_offset_y:renderY), renderWidth, renderHeight);
+                    glViewport(renderX, 1080 - g_view_height + (isMaskEnabled?(g_gba_video_offset_y==-1?renderY:g_gba_video_offset_y):renderY), renderWidth, renderHeight);
                 }
             }
             struct mBKGLES2Shader* cur_pass = &passes[i];

@@ -46,8 +46,8 @@ int g_view_height = 720;
 int g_cur_screen_aspect_ratio = 3;
 float g_cur_screen_brightness = 1.0f;
 
-int g_gba_video_offset_y = 0;
-int g_gbc_video_offset_y = 0;
+int g_gba_video_offset_y = -1;
+int g_gbc_video_offset_y = -1;
 
 int g_game_rewind_enable = 0;
 
@@ -2064,7 +2064,10 @@ int bk_Mask_OffsetRead(const char* maskPath)
 	}
 	int Padding_Bottom = getIntValue(maskConfigFilePath, "Padding_Bottom");
 	int mask_height = getIntValue(maskConfigFilePath, "mask_height");
-
+	if(mask_height == 0 || Padding_Bottom == 0)
+	{
+		return -1;
+	}
 	int mask_offset = (int)(g_view_height * (Padding_Bottom / (float)mask_height));
 
 
@@ -2076,12 +2079,12 @@ int bk_Mask_OffsetRead(const char* maskPath)
 
 int bk_Normal_offset(struct mGUIRunner* runner, int height, int vheight){
 	int asHeight = (int)(height * (float)g_cur_screen_aspect_ratio);
-	int renderY = (g_view_height - asHeight) / 2;
+	int renderY = (g_view_height - asHeight) / 4;
 	if(runner->core->platform(runner->core) == 1)
 	{
-		return renderY - g_gbc_video_offset_y;
+		return g_gbc_video_offset_y == -1? renderY : renderY - g_gbc_video_offset_y;
 	}else{
-		return renderY - g_gba_video_offset_y;
+		return g_gba_video_offset_y == -1? renderY : renderY - g_gba_video_offset_y;
 		
 	}
 }
