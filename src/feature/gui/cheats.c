@@ -154,6 +154,7 @@ void mGUIShowCheats(struct mGUIRunner* runner) {
 			.title = "[金手指列表]",
 			.readonly = true,
 		};
+		const int premenuCount = 3;
 		size_t i;
 		for (i = 0; i < mCheatSetsSize(&device->cheats); ++i) {
 			struct mCheatSet* set = *mCheatSetsGetPointer(&device->cheats, i);
@@ -177,7 +178,7 @@ void mGUIShowCheats(struct mGUIRunner* runner) {
 		enum GUIMenuExitReason reason = GUIShowMenu(&runner->params, &menu, &item);
 		for (i = 0; i < mCheatSetsSize(&device->cheats); ++i) {
 			struct mCheatSet* set = *mCheatSetsGetPointer(&device->cheats, i);
-			struct GUIMenuItem* item = GUIMenuItemListGetPointer(&menu.items, i);
+			struct GUIMenuItem* item = GUIMenuItemListGetPointer(&menu.items, i + premenuCount);
 			set->enabled = item->state;
 		}
 
