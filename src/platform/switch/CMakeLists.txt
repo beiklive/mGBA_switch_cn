@@ -34,6 +34,8 @@ endif()
 set(BEIKLIVE_SRC
     src/App.cpp
     src/EglManager.cpp
+    src/OpenGLManager.cpp
+    src/Utils.cpp
 	)
 
 add_executable(${BINARY_NAME}.elf ${GUI_SRC} ${PLATFORM_SRC} main.cpp ${BEIKLIVE_SRC})
