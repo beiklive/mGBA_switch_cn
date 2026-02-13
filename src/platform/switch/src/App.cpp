@@ -44,9 +44,7 @@ App::~App() {
 	psmInitialize();             // 电源状态管理
     eglManager->init();          // EGL初始化
 
-    glManager->initBackgroundGL(GetScreenSize());
-    glManager->initMenuTexture(GetScreenSize());
-    glManager->initFontTexture(GetScreenSize());
+    glManager->initPreprocessShader(GetScreenSize());
 
 }
 
@@ -58,14 +56,24 @@ void App::RunLoop() {
         glClear(GL_COLOR_BUFFER_BIT);
 
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, glManager->getBackgroundTexture());
+        glBindTexture(GL_TEXTURE_2D, glManager->getPreprocessShader()->tex);
         
         glViewport(0, 1080 - vheight, vwidth, vheight);
 
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glUseProgram(glManager->getBackgroundProgram());
+        glUseProgram(glManager->getPreprocessShader()->program);
+        glBindVertexArray(glManager->getPreprocessShader()->vao);
 
+	    glUniform1i(glManager->getPreprocessShader()->texLocation, 0);
+
+	    glUniform1f(glManager->getPreprocessShader()->brightnessLocation, 0.5f);
+        glUniform2f(glManager->getPreprocessShader()->dimsLocation, 1.0f, 1.0f);
+        glUniform2f(glManager->getPreprocessShader()->insizeLocation, 1, 1);
+        glUniform4f(
+                    glManager->getPreprocessShader()->colorLocation,
+                    1.0f, 1.0f, 1.0f, 1.0f
+                );
         glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
         glBindVertexArray(0);

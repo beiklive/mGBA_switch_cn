@@ -13,22 +13,19 @@ namespace beiklive
         // 公共接口
         void deleteGL(GLES2Shader * gl);
         
-        void initBackgroundGL(Vector2f ScreenHint);
-        void initMenuTexture(Vector2f ScreenHint);
-        void initFontTexture(Vector2f ScreenHint);
+        void initPreprocessShader(Vector2f ScreenHint);
         
 
 
-        // 获取纹理ID
-        GLuint getBackgroundTexture() const { return background_tex; }
-        GLuint getBackgroundProgram() const { return background_program; }
-        GLuint getMenuTexture() const { return menu_tex; }
-        GLuint getFontTexture() const { return font_tex; }
+        GLES2PreprocessShader* getPreprocessShader() const { return preprocess_gl; }
 
     private:    
+        // 初始化预处理着色器
         GLuint createEmptyTexture(Vector2f size);
-        void initShader(GLES2Shader * gl);
-        GLES2Shader * background_gl;
+        void initShader(GLES2PreprocessShader * gl, ShaderType type);
+        GLuint GetProgram(ShaderType type);
+
+        GLES2PreprocessShader * preprocess_gl;
 
         // GLuint menu_tex; // 菜单纹理
         // GLuint background_tex; // 背景纹理

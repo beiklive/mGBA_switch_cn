@@ -337,16 +337,37 @@ typedef struct {
 	GLuint vertexShader;
 	GLuint program;
 	GLuint texLocation;
-	GLuint texSizeLocation;
-	GLuint positionLocation;
 
-	// struct mBKGLES2Uniform* uniforms;
-	// size_t nUniforms;
 } GLES2Shader;
 
+typedef struct {
+	int width;
+	int height;
+	bool integerScaling;
+	bool filter;
+	bool blend;
+	bool dirty;
+	GLuint tex;
+	GLuint fbo;
+	GLuint vao;
+	GLuint vbo;
+	GLuint fragmentShader;
+	GLuint vertexShader;
+	GLuint program;
+	GLuint texLocation;
+	GLuint dimsLocation;
+	GLuint colorLocation;
+	GLuint insizeLocation;
+	GLuint brightnessLocation;
+	GLuint offsetLocation;
 
+} GLES2PreprocessShader;
 
-
+enum class ShaderType {
+    None,
+    //预处理
+    Preprocess
+};
 
 
 }
