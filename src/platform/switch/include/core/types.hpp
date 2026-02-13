@@ -320,4 +320,33 @@ inline Button operator|(Button a, Button b) {
 }
 
 
+
+
+typedef struct {
+	int width;
+	int height;
+	bool integerScaling;
+	bool filter;
+	bool blend;
+	bool dirty;
+	GLuint tex;
+	GLuint fbo;
+	GLuint vao;
+	GLuint vbo;
+	GLuint fragmentShader;
+	GLuint vertexShader;
+	GLuint program;
+	GLuint texLocation;
+	GLuint texSizeLocation;
+	GLuint positionLocation;
+
+	// struct mBKGLES2Uniform* uniforms;
+	// size_t nUniforms;
+} GLES2Shader;
+
+
+
+
+
+
 }

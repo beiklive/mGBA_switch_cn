@@ -11,10 +11,14 @@ namespace beiklive
         OpenGLManager();
         ~OpenGLManager();
         // 公共接口
-        void initBackgroundTexture(Vector2f ScreenHint);
+        void deleteGL(GLES2Shader * gl);
+        
+        void initBackgroundGL(Vector2f ScreenHint);
         void initMenuTexture(Vector2f ScreenHint);
         void initFontTexture(Vector2f ScreenHint);
         
+
+
         // 获取纹理ID
         GLuint getBackgroundTexture() const { return background_tex; }
         GLuint getBackgroundProgram() const { return background_program; }
@@ -23,12 +27,14 @@ namespace beiklive
 
     private:    
         GLuint createEmptyTexture(Vector2f size);
+        void initShader(GLES2Shader * gl);
+        GLES2Shader * background_gl;
 
-        GLuint menu_tex; // 菜单纹理
-        GLuint background_tex; // 背景纹理
-        GLuint font_tex; // 字体纹理
+        // GLuint menu_tex; // 菜单纹理
+        // GLuint background_tex; // 背景纹理
+        // GLuint font_tex; // 字体纹理
 
-        GLuint background_program; // 背景渲染程序
+        // GLuint background_program; // 背景渲染程序
 
 
     };

@@ -1775,7 +1775,7 @@ void mBKGLES2ShaderInit(struct mBKGLES2Shader* shader, const char* vs, const cha
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, shader->gba_tex, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
+	
 	// GBC framebuffer texture
 	glGenFramebuffers(1, &shader->gbc_fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, shader->gbc_fbo);

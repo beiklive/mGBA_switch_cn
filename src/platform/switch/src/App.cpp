@@ -44,7 +44,7 @@ App::~App() {
 	psmInitialize();             // 电源状态管理
     eglManager->init();          // EGL初始化
 
-    glManager->initBackgroundTexture(GetScreenSize());
+    glManager->initBackgroundGL(GetScreenSize());
     glManager->initMenuTexture(GetScreenSize());
     glManager->initFontTexture(GetScreenSize());
 

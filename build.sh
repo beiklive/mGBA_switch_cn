@@ -1,0 +1,1 @@
+docker run --rm -t -v $PWD:/home/mgba/src mgba/switch
