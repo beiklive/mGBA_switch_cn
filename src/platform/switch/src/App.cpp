@@ -51,6 +51,7 @@ App::~App() {
 void App::RunLoop() { 
     running = true;
     while(appletMainLoop()){
+        spdlog::info("Hello, world!");
         // 清空颜色缓冲
         glClearColor(0.f, 0.f, 0.f, 1.f);
         glClear(GL_COLOR_BUFFER_BIT);

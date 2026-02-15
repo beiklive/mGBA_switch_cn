@@ -1,0 +1,1 @@
+nxlink -s -a 192.168.2.42 '/mGBA/build-switch/switch/mgba.nro'
