@@ -1,7 +1,6 @@
 #pragma once
 
 #include <switch.h>
-#include <pu/Plutonium>
 #include "core/common.h"
 #include "EglManager.h"
 #include "OpenGLManager.h"
@@ -28,9 +27,6 @@ private:
     EglManager* eglManager;
     beiklive::OpenGLManager* glManager;
 
-    // Plutonium 相关
-    pu::ui::render::Renderer::Ref renderer;
-    pu::ui::Application::Ref app;
 
     bool uiVisible;      // 当前是否显示 UI 菜单
     bool running;
