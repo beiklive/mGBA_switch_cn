@@ -1,0 +1,13 @@
+{
+    "name": "我的项目",
+    "image": "devkitpro/devkita64:20260202",
+    "mounts": [
+        {
+            "source": "/Users/beiklive/Work/Code/mGBA_switch_cn",
+            "target": "/mGBA",
+            "type": "bind"
+        }
+    ],
+    // 设置容器内的工作目录
+    "workspaceFolder": "/mGBA"
+}

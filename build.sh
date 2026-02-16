@@ -1,1 +1,3 @@
-docker run --rm -t -v $PWD:/home/mgba/src mgba/switch
+cd ./build-switch &&
+cmake -DCMAKE_TOOLCHAIN_FILE=../src/platform/switch/CMakeToolchain.txt .. &&
+make
