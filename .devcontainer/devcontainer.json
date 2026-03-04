@@ -1,0 +1,12 @@
+{
+    "name": "我的项目",
+    "image": "devkitpro/devkita64:latest",
+    // 其他配置...
+    "mounts": [
+        {
+            "source": "E:/MyCode/mgba-0.10.5/mgba-0.10.5",
+            "target": "/root/mGBA-reborn",
+            "type": "bind"
+        }
+    ]
+}
