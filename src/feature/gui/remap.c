@@ -5,6 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 #include "remap.h"
 
+#include <mgba/core/config.h>
 #include <mgba-util/gui.h>
 #include <mgba-util/gui/menu.h>
 
@@ -20,6 +21,7 @@ void mGUIRemapKeys(struct GUIParams* params, struct mInputMap* map, const struct
 	const char* keyNames[keys->nKeys + 1];
 	memcpy(&keyNames[1], keys->keyNames, keys->nKeys * sizeof(keyNames[0]));
 	keyNames[0] = "未映射";
+	unsigned turboBase = GUI_INPUT_MAX + map->info->nKeys + 1;
 	size_t i;
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
 		.title = "游戏按键:",
@@ -35,6 +37,26 @@ void mGUIRemapKeys(struct GUIParams* params, struct mInputMap* map, const struct
 			.nStates = keys->nKeys + 1
 		};
 	}
+	int turboBtn = -1;
+	mCoreConfigGetIntValue(&bk_global_runner->config, "turboABtn", &turboBtn);
+	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+		.title = "连发A",
+		.data = GUI_V_U(turboBase),
+		.submenu = 0,
+		.state = turboBtn + 1,
+		.validStates = keyNames,
+		.nStates = keys->nKeys + 1
+	};
+	turboBtn = -1;
+	mCoreConfigGetIntValue(&bk_global_runner->config, "turboBBtn", &turboBtn);
+	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+		.title = "连发B",
+		.data = GUI_V_U(turboBase + 1),
+		.submenu = 0,
+		.state = turboBtn + 1,
+		.validStates = keyNames,
+		.nStates = keys->nKeys + 1
+	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
 		.title = "系统按键:",
 		.readonly = true,
@@ -76,8 +98,12 @@ void mGUIRemapKeys(struct GUIParams* params, struct mInputMap* map, const struct
 				}
 				if (item->data.v.u < GUI_INPUT_MAX + 1) {
 					mInputBindKey(&params->keyMap, keys->id, item->state - 1, item->data.v.u - 1);
-				} else if (item->data.v.u < GUI_INPUT_MAX + map->info->nKeys + 1) {
+				} else if (item->data.v.u < turboBase) {
 					mInputBindKey(map, keys->id, item->state - 1, item->data.v.u - GUI_INPUT_MAX - 1);
+				} else if (item->data.v.u == turboBase) {
+					mCoreConfigSetIntValue(&bk_global_runner->config, "turboABtn", (int)item->state - 1);
+				} else if (item->data.v.u == turboBase + 1) {
+					mCoreConfigSetIntValue(&bk_global_runner->config, "turboBBtn", (int)item->state - 1);
 				}
 			}
 			break;

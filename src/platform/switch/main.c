@@ -142,6 +142,12 @@ static float gyroZ = 0;            // 陀螺仪Z轴旋转速度
 static float tiltX = 0;            // X轴倾斜加速度
 static float tiltY = 0;            // Y轴倾斜加速度
 
+static int turboAStatus = 0;
+static int turboBStatus = 0;
+static int turboABtn = -1;
+static int turboBBtn = -1;
+static int turboSpeed = 3;
+
 // 音频缓冲池（4个缓冲，每个大小为BUFFER_SIZE字节，4096字节对齐）
 static struct mStereoSample audioBuffer[N_BUFFERS][BUFFER_SIZE / 4] __attribute__((__aligned__(0x1000)));
 
@@ -299,6 +305,36 @@ static uint32_t _pollInput(const struct mInputMap* map) {
 	if (jspos.y > ANALOG_DEADZONE && u != -1) {
 		keys |= 1 << u;  // 上移
 	}
+
+	if (turboABtn >= 0 && (padkeys & (1 << turboABtn))) {
+		int aBit = mInputMapKey(map, AUTO_INPUT, __builtin_ctz(HidNpadButton_A));
+		if (aBit != -1) {
+			++turboAStatus;
+			if (turboAStatus >= 2 * turboSpeed) {
+				turboAStatus = 0;
+			}
+			if (turboAStatus >= turboSpeed) {
+				keys |= 1 << aBit;
+			}
+		}
+	} else {
+		turboAStatus = 0;
+	}
+	if (turboBBtn >= 0 && (padkeys & (1 << turboBBtn))) {
+		int bBit = mInputMapKey(map, AUTO_INPUT, __builtin_ctz(HidNpadButton_B));
+		if (bBit != -1) {
+			++turboBStatus;
+			if (turboBStatus >= 2 * turboSpeed) {
+				turboBStatus = 0;
+			}
+			if (turboBStatus >= turboSpeed) {
+				keys |= 1 << bBit;
+			}
+		}
+	} else {
+		turboBStatus = 0;
+	}
+
 	return keys;
 }
 
@@ -480,6 +516,17 @@ static void _gameLoaded(struct mGUIRunner* runner) {
 	}
 
 
+
+	if (mCoreConfigGetIntValue(&runner->config, "turboABtn", &fakeBool)) {
+		turboABtn = fakeBool;
+	}
+	if (mCoreConfigGetIntValue(&runner->config, "turboBBtn", &fakeBool)) {
+		turboBBtn = fakeBool;
+	}
+	unsigned speed;
+	if (mCoreConfigGetUIntValue(&runner->config, "autofireThreshold", &speed)) {
+		turboSpeed = speed;
+	}
 
 	// 处理GPU加速配置更改
 	if (runner->core->supportsFeature(runner->core, mCORE_FEATURE_OPENGL)) {
@@ -1577,8 +1624,26 @@ int main(int argc, char* argv[]) {
 				},
 				.nStates = 2
 			},
+			{
+				.title = "连发速度",
+				.data = GUI_V_S("autofireThreshold"),
+				.submenu = 0,
+				.state = 2,
+				.validStates = (const char*[]) {
+					"极快", "很快", "快", "中", "慢", "很慢",
+				},
+				.stateMappings = (const struct GUIVariant[]) {
+					GUI_V_U(1),
+					GUI_V_U(2),
+					GUI_V_U(3),
+					GUI_V_U(4),
+					GUI_V_U(6),
+					GUI_V_U(8),
+				},
+				.nStates = 6
+			},
 		},
-		.nConfigExtra = 5,
+		.nConfigExtra = 7,
 		.setup = _setup,
 		.teardown = NULL,
 		.gameLoaded = _gameLoaded,
