@@ -16,6 +16,7 @@ CXX_GUARD_START
 
 extern MGBA_EXPORT const uint32_t GBASavestateMagic;
 extern MGBA_EXPORT const uint32_t GBASavestateVersion;
+#define GBA_EXTENDED_SAVESTATE_MAGIC 0x01010007U
 
 mLOG_DECLARE_CATEGORY(GBA_STATE);
 
@@ -270,6 +271,8 @@ DECL_BITFIELD(GBASerializedHWFlags3, uint16_t);
 DECL_BITFIELD(GBASerializedSavedataFlags, uint8_t);
 DECL_BITS(GBASerializedSavedataFlags, FlashState, 0, 2);
 DECL_BIT(GBASerializedSavedataFlags, FlashBank, 4);
+// Preserve bank 0/1 and DustSettling bit positions in existing states.
+DECL_BITS(GBASerializedSavedataFlags, FlashBankHigh, 6, 2);
 DECL_BIT(GBASerializedSavedataFlags, DustSettling, 5);
 
 DECL_BITFIELD(GBASerializedMiscFlags, uint32_t);

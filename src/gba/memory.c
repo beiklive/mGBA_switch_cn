@@ -58,6 +58,7 @@ void GBAMemoryInit(struct GBA* gba) {
 	gba->memory.rom = 0;
 	gba->memory.romSize = 0;
 	gba->memory.romMask = 0;
+	gba->memory.wramSize = SIZE_WORKING_RAM;
 	gba->memory.hw.p = gba;
 
 	int i;
@@ -89,8 +90,8 @@ void GBAMemoryInit(struct GBA* gba) {
 	gba->memory.agbPrintBuffer = NULL;
 	gba->memory.agbPrintBufferBackup = NULL;
 
-	gba->memory.wram = anonymousMemoryMap(SIZE_WORKING_RAM + SIZE_WORKING_IRAM);
-	gba->memory.iwram = &gba->memory.wram[SIZE_WORKING_RAM >> 2];
+	gba->memory.wram = anonymousMemoryMap(SIZE_WORKING_RAM_EXTENDED + SIZE_WORKING_IRAM);
+	gba->memory.iwram = &gba->memory.wram[SIZE_WORKING_RAM_EXTENDED >> 2];
 
 	GBADMAInit(gba);
 	GBAVFameInit(&gba->memory.vfame);
@@ -101,7 +102,7 @@ void GBAMemoryInit(struct GBA* gba) {
 }
 
 void GBAMemoryDeinit(struct GBA* gba) {
-	mappedMemoryFree(gba->memory.wram, SIZE_WORKING_RAM + SIZE_WORKING_IRAM);
+	mappedMemoryFree(gba->memory.wram, SIZE_WORKING_RAM_EXTENDED + SIZE_WORKING_IRAM);
 	if (gba->memory.rom) {
 		mappedMemoryFree(gba->memory.rom, gba->memory.romSize);
 	}
@@ -117,7 +118,7 @@ void GBAMemoryDeinit(struct GBA* gba) {
 
 void GBAMemoryReset(struct GBA* gba) {
 	if (gba->memory.wram && gba->memory.rom) {
-		memset(gba->memory.wram, 0, SIZE_WORKING_RAM);
+		memset(gba->memory.wram, 0, gba->memory.wramSize);
 	}
 
 	if (gba->memory.iwram) {
@@ -277,7 +278,7 @@ static void GBASetActiveRegion(struct ARMCore* cpu, uint32_t address) {
 		} else {
 			cpu->memory.activeMask &= -WORD_SIZE_ARM;
 		}
-		if (newRegion < REGION_CART0 || (address & (SIZE_CART0 - 1)) < memory->romSize) {
+		if (newRegion < REGION_CART0 || (address & GBAROMAddressMask(memory)) < memory->romSize) {
 			return;
 		}
 	}
@@ -293,7 +294,7 @@ static void GBASetActiveRegion(struct ARMCore* cpu, uint32_t address) {
 		break;
 	case REGION_WORKING_RAM:
 		cpu->memory.activeRegion = memory->wram;
-		cpu->memory.activeMask = SIZE_WORKING_RAM - 1;
+		cpu->memory.activeMask = memory->wramSize - 1;
 		break;
 	case REGION_WORKING_IRAM:
 		cpu->memory.activeRegion = memory->iwram;
@@ -324,7 +325,7 @@ static void GBASetActiveRegion(struct ARMCore* cpu, uint32_t address) {
 	case REGION_CART2_EX:
 		cpu->memory.activeRegion = memory->rom;
 		cpu->memory.activeMask = memory->romMask;
-		if ((address & (SIZE_CART0 - 1)) < memory->romSize) {
+		if ((address & GBAROMAddressMask(memory)) < memory->romSize) {
 			break;
 		}
 		if ((address & 0x00FFFFFE) == AGB_PRINT_FLUSH_ADDR && memory->agbPrintProtect == 0x20) {
@@ -379,7 +380,7 @@ static void GBASetActiveRegion(struct ARMCore* cpu, uint32_t address) {
 	}
 
 #define LOAD_WORKING_RAM \
-	LOAD_32(value, address & (SIZE_WORKING_RAM - 4), memory->wram); \
+	LOAD_32(value, address & (memory->wramSize - 4), memory->wram); \
 	wait += waitstatesRegion[REGION_WORKING_RAM];
 
 #define LOAD_WORKING_IRAM LOAD_32(value, address & (SIZE_WORKING_IRAM - 4), memory->iwram);
@@ -409,8 +410,8 @@ static void GBASetActiveRegion(struct ARMCore* cpu, uint32_t address) {
 
 #define LOAD_CART \
 	wait += waitstatesRegion[address >> BASE_OFFSET]; \
-	if ((address & (SIZE_CART0 - 1)) < memory->romSize) { \
-		LOAD_32(value, address & (SIZE_CART0 - 4), memory->rom); \
+	if ((address & GBAROMAddressMask(memory)) < memory->romSize) { \
+		LOAD_32(value, address & (GBAROMAddressMask(memory) - 3), memory->rom); \
 	} else if (memory->vfame.cartType) { \
 		value = GBAVFameGetPatternValue(address, 32); \
 	} else { \
@@ -538,7 +539,7 @@ uint32_t GBALoad16(struct ARMCore* cpu, uint32_t address, int* cycleCounter) {
 		}
 		break;
 	case REGION_WORKING_RAM:
-		LOAD_16(value, address & (SIZE_WORKING_RAM - 2), memory->wram);
+		LOAD_16(value, address & (memory->wramSize - 2), memory->wram);
 		wait = memory->waitstatesNonseq16[REGION_WORKING_RAM];
 		break;
 	case REGION_WORKING_IRAM:
@@ -574,11 +575,11 @@ uint32_t GBALoad16(struct ARMCore* cpu, uint32_t address, int* cycleCounter) {
 	case REGION_CART1_EX:
 	case REGION_CART2:
 		wait = memory->waitstatesNonseq16[address >> BASE_OFFSET];
-		if ((address & (SIZE_CART0 - 1)) < memory->romSize) {
-			LOAD_16(value, address & (SIZE_CART0 - 2), memory->rom);
+		if ((address & GBAROMAddressMask(memory)) < memory->romSize) {
+			LOAD_16(value, address & (GBAROMAddressMask(memory) - 1), memory->rom);
 		} else if (memory->vfame.cartType) {
 			value = GBAVFameGetPatternValue(address, 16);
-		} else if ((address & (SIZE_CART0 - 1)) >= AGB_PRINT_BASE) {
+		} else if ((address & GBAROMAddressMask(memory)) >= AGB_PRINT_BASE) {
 			uint32_t agbPrintAddr = address & 0x00FFFFFF;
 			if (agbPrintAddr == AGB_PRINT_PROTECT) {
 				value = memory->agbPrintProtect;
@@ -599,8 +600,8 @@ uint32_t GBALoad16(struct ARMCore* cpu, uint32_t address, int* cycleCounter) {
 			value = GBASavedataReadEEPROM(&memory->savedata);
 		} else if ((address & 0x0DFC0000) >= 0x0DF80000 && memory->hw.devices & HW_EREADER) {
 			value = GBACartEReaderRead(&memory->ereader, address);
-		} else if ((address & (SIZE_CART0 - 1)) < memory->romSize) {
-			LOAD_16(value, address & (SIZE_CART0 - 2), memory->rom);
+		} else if ((address & GBAROMAddressMask(memory)) < memory->romSize) {
+			LOAD_16(value, address & (GBAROMAddressMask(memory) - 1), memory->rom);
 		} else if (memory->vfame.cartType) {
 			value = GBAVFameGetPatternValue(address, 16);
 		} else {
@@ -653,7 +654,7 @@ uint32_t GBALoad8(struct ARMCore* cpu, uint32_t address, int* cycleCounter) {
 		}
 		break;
 	case REGION_WORKING_RAM:
-		value = ((uint8_t*) memory->wram)[address & (SIZE_WORKING_RAM - 1)];
+		value = ((uint8_t*) memory->wram)[address & (memory->wramSize - 1)];
 		wait = memory->waitstatesNonseq16[REGION_WORKING_RAM];
 		break;
 	case REGION_WORKING_IRAM:
@@ -690,8 +691,8 @@ uint32_t GBALoad8(struct ARMCore* cpu, uint32_t address, int* cycleCounter) {
 	case REGION_CART2:
 	case REGION_CART2_EX:
 		wait = memory->waitstatesNonseq16[address >> BASE_OFFSET];
-		if ((address & (SIZE_CART0 - 1)) < memory->romSize) {
-			value = ((uint8_t*) memory->rom)[address & (SIZE_CART0 - 1)];
+		if ((address & GBAROMAddressMask(memory)) < memory->romSize) {
+			value = ((uint8_t*) memory->rom)[address & GBAROMAddressMask(memory)];
 		} else if (memory->vfame.cartType) {
 			value = GBAVFameGetPatternValue(address, 8);
 		} else {
@@ -713,7 +714,7 @@ uint32_t GBALoad8(struct ARMCore* cpu, uint32_t address, int* cycleCounter) {
 			value = GBACartEReaderReadFlash(&memory->ereader, address);
 		} else if (memory->savedata.type == SAVEDATA_SRAM) {
 			value = memory->savedata.data[address & (SIZE_CART_SRAM - 1)];
-		} else if (memory->savedata.type == SAVEDATA_FLASH512 || memory->savedata.type == SAVEDATA_FLASH1M) {
+		} else if (memory->savedata.type == SAVEDATA_FLASH512 || memory->savedata.type == SAVEDATA_FLASH1M || memory->savedata.type == SAVEDATA_FLASH4M) {
 			value = GBASavedataReadFlash(&memory->savedata, address);
 		} else if (memory->hw.devices & HW_TILT) {
 			value = GBAHardwareTiltRead(&memory->hw, address & OFFSET_MASK);
@@ -742,7 +743,7 @@ uint32_t GBALoad8(struct ARMCore* cpu, uint32_t address, int* cycleCounter) {
 }
 
 #define STORE_WORKING_RAM \
-	STORE_32(value, address & (SIZE_WORKING_RAM - 4), memory->wram); \
+	STORE_32(value, address & (memory->wramSize - 4), memory->wram); \
 	wait += waitstatesRegion[REGION_WORKING_RAM];
 
 #define STORE_WORKING_IRAM \
@@ -874,7 +875,7 @@ void GBAStore16(struct ARMCore* cpu, uint32_t address, int16_t value, int* cycle
 
 	switch (address >> BASE_OFFSET) {
 	case REGION_WORKING_RAM:
-		STORE_16(value, address & (SIZE_WORKING_RAM - 2), memory->wram);
+		STORE_16(value, address & (memory->wramSize - 2), memory->wram);
 		wait = memory->waitstatesNonseq16[REGION_WORKING_RAM];
 		break;
 	case REGION_WORKING_IRAM:
@@ -1016,7 +1017,7 @@ void GBAStore8(struct ARMCore* cpu, uint32_t address, int8_t value, int* cycleCo
 
 	switch (address >> BASE_OFFSET) {
 	case REGION_WORKING_RAM:
-		((int8_t*) memory->wram)[address & (SIZE_WORKING_RAM - 1)] = value;
+		((int8_t*) memory->wram)[address & (memory->wramSize - 1)] = value;
 		wait = memory->waitstatesNonseq16[REGION_WORKING_RAM];
 		break;
 	case REGION_WORKING_IRAM:
@@ -1061,7 +1062,7 @@ void GBAStore8(struct ARMCore* cpu, uint32_t address, int8_t value, int* cycleCo
 		}
 		if (memory->hw.devices & HW_EREADER && (address & 0xE00FF80) >= 0xE00FF80) {
 			GBACartEReaderWriteFlash(&memory->ereader, address, value);
-		} else if (memory->savedata.type == SAVEDATA_FLASH512 || memory->savedata.type == SAVEDATA_FLASH1M) {
+		} else if (memory->savedata.type == SAVEDATA_FLASH512 || memory->savedata.type == SAVEDATA_FLASH1M || memory->savedata.type == SAVEDATA_FLASH4M) {
 			GBASavedataWriteFlash(&memory->savedata, address, value);
 		} else if (memory->savedata.type == SAVEDATA_SRAM) {
 			if (memory->vfame.cartType) {
@@ -1213,8 +1214,8 @@ void GBAPatch32(struct ARMCore* cpu, uint32_t address, int32_t value, int32_t* o
 
 	switch (address >> BASE_OFFSET) {
 	case REGION_WORKING_RAM:
-		LOAD_32(oldValue, address & (SIZE_WORKING_RAM - 4), memory->wram);
-		STORE_32(value, address & (SIZE_WORKING_RAM - 4), memory->wram);
+		LOAD_32(oldValue, address & (memory->wramSize - 4), memory->wram);
+		STORE_32(value, address & (memory->wramSize - 4), memory->wram);
 		break;
 	case REGION_WORKING_IRAM:
 		LOAD_32(oldValue, address & (SIZE_WORKING_IRAM - 4), memory->iwram);
@@ -1255,12 +1256,12 @@ void GBAPatch32(struct ARMCore* cpu, uint32_t address, int32_t value, int32_t* o
 	case REGION_CART2:
 	case REGION_CART2_EX:
 		_pristineCow(gba);
-		if ((address & (SIZE_CART0 - 4)) >= gba->memory.romSize) {
-			gba->memory.romSize = (address & (SIZE_CART0 - 4)) + 4;
+		if ((address & (GBAROMAddressMask(memory) - 3)) >= gba->memory.romSize) {
+			gba->memory.romSize = (address & (GBAROMAddressMask(memory) - 3)) + 4;
 			gba->memory.romMask = toPow2(gba->memory.romSize) - 1;
 		}
-		LOAD_32(oldValue, address & (SIZE_CART0 - 4), gba->memory.rom);
-		STORE_32(value, address & (SIZE_CART0 - 4), gba->memory.rom);
+		LOAD_32(oldValue, address & (GBAROMAddressMask(memory) - 3), gba->memory.rom);
+		STORE_32(value, address & (GBAROMAddressMask(memory) - 3), gba->memory.rom);
 		break;
 	case REGION_CART_SRAM:
 	case REGION_CART_SRAM_MIRROR:
@@ -1287,8 +1288,8 @@ void GBAPatch16(struct ARMCore* cpu, uint32_t address, int16_t value, int16_t* o
 
 	switch (address >> BASE_OFFSET) {
 	case REGION_WORKING_RAM:
-		LOAD_16(oldValue, address & (SIZE_WORKING_RAM - 2), memory->wram);
-		STORE_16(value, address & (SIZE_WORKING_RAM - 2), memory->wram);
+		LOAD_16(oldValue, address & (memory->wramSize - 2), memory->wram);
+		STORE_16(value, address & (memory->wramSize - 2), memory->wram);
 		break;
 	case REGION_WORKING_IRAM:
 		LOAD_16(oldValue, address & (SIZE_WORKING_IRAM - 2), memory->iwram);
@@ -1325,12 +1326,12 @@ void GBAPatch16(struct ARMCore* cpu, uint32_t address, int16_t value, int16_t* o
 	case REGION_CART2:
 	case REGION_CART2_EX:
 		_pristineCow(gba);
-		if ((address & (SIZE_CART0 - 1)) >= gba->memory.romSize) {
-			gba->memory.romSize = (address & (SIZE_CART0 - 2)) + 2;
+		if ((address & GBAROMAddressMask(memory)) >= gba->memory.romSize) {
+			gba->memory.romSize = (address & (GBAROMAddressMask(memory) - 1)) + 2;
 			gba->memory.romMask = toPow2(gba->memory.romSize) - 1;
 		}
-		LOAD_16(oldValue, address & (SIZE_CART0 - 2), gba->memory.rom);
-		STORE_16(value, address & (SIZE_CART0 - 2), gba->memory.rom);
+		LOAD_16(oldValue, address & (GBAROMAddressMask(memory) - 1), gba->memory.rom);
+		STORE_16(value, address & (GBAROMAddressMask(memory) - 1), gba->memory.rom);
 		break;
 	case REGION_CART_SRAM:
 	case REGION_CART_SRAM_MIRROR:
@@ -1357,8 +1358,8 @@ void GBAPatch8(struct ARMCore* cpu, uint32_t address, int8_t value, int8_t* old)
 
 	switch (address >> BASE_OFFSET) {
 	case REGION_WORKING_RAM:
-		oldValue = ((int8_t*) memory->wram)[address & (SIZE_WORKING_RAM - 1)];
-		((int8_t*) memory->wram)[address & (SIZE_WORKING_RAM - 1)] = value;
+		oldValue = ((int8_t*) memory->wram)[address & (memory->wramSize - 1)];
+		((int8_t*) memory->wram)[address & (memory->wramSize - 1)] = value;
 		break;
 	case REGION_WORKING_IRAM:
 		oldValue = ((int8_t*) memory->iwram)[address & (SIZE_WORKING_IRAM - 1)];
@@ -1383,12 +1384,12 @@ void GBAPatch8(struct ARMCore* cpu, uint32_t address, int8_t value, int8_t* old)
 	case REGION_CART2:
 	case REGION_CART2_EX:
 		_pristineCow(gba);
-		if ((address & (SIZE_CART0 - 1)) >= gba->memory.romSize) {
-			gba->memory.romSize = (address & (SIZE_CART0 - 2)) + 2;
+		if ((address & GBAROMAddressMask(memory)) >= gba->memory.romSize) {
+			gba->memory.romSize = (address & (GBAROMAddressMask(memory) - 1)) + 2;
 			gba->memory.romMask = toPow2(gba->memory.romSize) - 1;
 		}
-		oldValue = ((int8_t*) memory->rom)[address & (SIZE_CART0 - 1)];
-		((int8_t*) memory->rom)[address & (SIZE_CART0 - 1)] = value;
+		oldValue = ((int8_t*) memory->rom)[address & GBAROMAddressMask(memory)];
+		((int8_t*) memory->rom)[address & GBAROMAddressMask(memory)] = value;
 		break;
 	case REGION_CART_SRAM:
 	case REGION_CART_SRAM_MIRROR:
@@ -1816,9 +1817,9 @@ void _pristineCow(struct GBA* gba) {
 		return;
 	}
 #if !defined(FIXED_ROM_BUFFER) && !defined(__wii__)
-	void* newRom = anonymousMemoryMap(SIZE_CART0);
+	void* newRom = anonymousMemoryMap(GBAROMAddressMask(&gba->memory) + 1);
 	memcpy(newRom, gba->memory.rom, gba->memory.romSize);
-	memset(((uint8_t*) newRom) + gba->memory.romSize, 0xFF, SIZE_CART0 - gba->memory.romSize);
+	memset(((uint8_t*) newRom) + gba->memory.romSize, 0xFF, GBAROMAddressMask(&gba->memory) + 1 - gba->memory.romSize);
 	if (gba->cpu->memory.activeRegion == gba->memory.rom) {
 		gba->cpu->memory.activeRegion = newRom;
 	}

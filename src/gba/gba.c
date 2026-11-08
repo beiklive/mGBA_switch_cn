@@ -138,7 +138,7 @@ void GBAUnloadROM(struct GBA* gba) {
 			gba->yankedRomSize = 0;
 		}
 #ifndef FIXED_ROM_BUFFER
-		mappedMemoryFree(gba->memory.rom, SIZE_CART0);
+		mappedMemoryFree(gba->memory.rom, GBAROMAddressMask(&gba->memory) + 1);
 #endif
 	}
 
@@ -419,10 +419,16 @@ bool GBALoadROM(struct GBA* gba, struct VFile* vf) {
 			gba->memory.rom = anonymousMemoryMap(SIZE_CART0);
 #endif
 		} else {
-			gba->memory.rom = vf->map(vf, SIZE_CART0, MAP_READ);
-			gba->memory.romSize = SIZE_CART0;
+			size_t romSize = SIZE_CART0;
+#ifndef FIXED_ROM_BUFFER
+			if (gba->pristineRomSize <= SIZE_CART_EXTENDED) {
+				romSize = gba->pristineRomSize;
+			}
+#endif
+			gba->memory.rom = vf->map(vf, romSize, MAP_READ);
+			gba->memory.romSize = romSize;
 		}
-		gba->pristineRomSize = SIZE_CART0;
+		gba->pristineRomSize = ident == 'M' ? SIZE_CART0 : gba->memory.romSize;
 	} else if (gba->pristineRomSize == 0x00100000) {
 		// 1 MiB ROMs (e.g. Classic NES) all appear as 4x mirrored, but not more
 		gba->isPristine = false;
@@ -448,15 +454,24 @@ bool GBALoadROM(struct GBA* gba, struct VFile* vf) {
 	gba->yankedRomSize = 0;
 	gba->memory.romMask = toPow2(gba->memory.romSize) - 1;
 	gba->romCrc32 = doCrc32(gba->memory.rom, gba->pristineRomSize);
+	// The core selects expanded EWRAM from configuration on reset.
+	gba->memory.wramSize = SIZE_WORKING_RAM;
 	if (popcount32(gba->memory.romSize) != 1) {
 		// This ROM is either a bad dump or homebrew. Emulate flash cart behavior.
 #ifndef FIXED_ROM_BUFFER
-		void* newRom = anonymousMemoryMap(SIZE_CART0);
+		size_t romSize = GBAROMAddressMask(&gba->memory) + 1;
+		void* newRom = anonymousMemoryMap(romSize);
+		if (!newRom) {
+			GBAUnloadROM(gba);
+			return false;
+		}
 		memcpy(newRom, gba->memory.rom, gba->pristineRomSize);
+		memset((uint8_t*) newRom + gba->pristineRomSize, 0xFF, romSize - gba->pristineRomSize);
+		vf->unmap(vf, gba->memory.rom, gba->pristineRomSize);
 		gba->memory.rom = newRom;
 #endif
-		gba->memory.romSize = SIZE_CART0;
-		gba->memory.romMask = SIZE_CART0 - 1;
+		gba->memory.romSize = GBAROMAddressMask(&gba->memory) + 1;
+		gba->memory.romMask = gba->memory.romSize - 1;
 		gba->isPristine = false;
 	}
 	if (gba->cpu && gba->memory.activeRegion >= REGION_CART0) {
@@ -520,18 +535,30 @@ void GBALoadBIOS(struct GBA* gba, struct VFile* vf) {
 
 void GBAApplyPatch(struct GBA* gba, struct Patch* patch) {
 	size_t patchedSize = patch->outputSize(patch, gba->memory.romSize);
-	if (!patchedSize || patchedSize > SIZE_CART0) {
+#ifdef FIXED_ROM_BUFFER
+	const size_t maxRomSize = SIZE_CART0;
+#else
+	const size_t maxRomSize = SIZE_CART_EXTENDED;
+#endif
+	if (!patchedSize || patchedSize > maxRomSize) {
 		return;
 	}
-	void* newRom = anonymousMemoryMap(SIZE_CART0);
+	size_t allocationSize = SIZE_CART0;
+	if (patchedSize > SIZE_CART0) {
+		allocationSize = SIZE_CART_EXTENDED;
+	}
+	void* newRom = anonymousMemoryMap(allocationSize);
+	if (!newRom) {
+		return;
+	}
 	if (!patch->applyPatch(patch, gba->memory.rom, gba->pristineRomSize, newRom, patchedSize)) {
-		mappedMemoryFree(newRom, SIZE_CART0);
+		mappedMemoryFree(newRom, allocationSize);
 		return;
 	}
 	if (gba->romVf) {
 #ifndef FIXED_ROM_BUFFER
 		if (!gba->isPristine) {
-			mappedMemoryFree(gba->memory.rom, SIZE_CART0);
+			mappedMemoryFree(gba->memory.rom, GBAROMAddressMask(&gba->memory) + 1);
 		} else {
 			gba->romVf->unmap(gba->romVf, gba->memory.rom, gba->pristineRomSize);
 		}

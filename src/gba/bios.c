@@ -64,7 +64,7 @@ static void _RegisterRamReset(struct GBA* gba) {
 	struct ARMCore* cpu = gba->cpu;
 	cpu->memory.store16(cpu, BASE_IO | REG_DISPCNT, 0x0080, 0);
 	if (registers & 0x01) {
-		memset(gba->memory.wram, 0, SIZE_WORKING_RAM);
+		memset(gba->memory.wram, 0, gba->memory.wramSize);
 	}
 	if (registers & 0x02) {
 		memset(gba->memory.iwram, 0, SIZE_WORKING_IRAM - 0x200);

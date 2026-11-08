@@ -360,6 +360,8 @@ void mGUIInit(struct mGUIRunner* runner, const char* port) {
 
 	mCoreConfigSetDefaultIntValue(&runner->config, "volume", 0x100);
 	mCoreConfigSetDefaultValue(&runner->config, "idleOptimization", "detect");
+	mCoreConfigSetDefaultIntValue(&runner->config, "gba.saveType", SAVEDATA_AUTODETECT);
+	mCoreConfigSetDefaultIntValue(&runner->config, "gba.rom64Special512", true);
 	mCoreConfigSetDefaultIntValue(&runner->config, "autoload", true);
 #ifdef DISABLE_THREADING
 	mCoreConfigSetDefaultIntValue(&runner->config, "autosave", false);

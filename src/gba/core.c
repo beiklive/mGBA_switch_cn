@@ -114,6 +114,21 @@ static const struct mCoreMemoryBlock _GBAMemoryBlocksFlash1M[] = {
 	{ REGION_CART_SRAM, "sram", "Flash", "Flash Memory (128kiB)", BASE_CART_SRAM, BASE_CART_SRAM + SIZE_CART_FLASH512, SIZE_CART_FLASH1M, mCORE_MEMORY_RW | mCORE_MEMORY_MAPPED, 1 },
 };
 
+static const struct mCoreMemoryBlock _GBAMemoryBlocksExpanded[] = {
+	{ -1, "mem", "All", "All", 0, 0x10000000, 0x10000000, mCORE_MEMORY_VIRTUAL },
+	{ REGION_BIOS, "bios", "BIOS", "BIOS (16kiB)", BASE_BIOS, SIZE_BIOS, SIZE_BIOS, mCORE_MEMORY_READ | mCORE_MEMORY_MAPPED },
+	{ REGION_WORKING_RAM, "wram", "EWRAM", "Working RAM (512kiB)", BASE_WORKING_RAM, BASE_WORKING_RAM + SIZE_WORKING_RAM_EXTENDED, SIZE_WORKING_RAM_EXTENDED, mCORE_MEMORY_RW | mCORE_MEMORY_MAPPED },
+	{ REGION_WORKING_IRAM, "iwram", "IWRAM", "Internal Working RAM (32kiB)", BASE_WORKING_IRAM, BASE_WORKING_IRAM + SIZE_WORKING_IRAM, SIZE_WORKING_IRAM, mCORE_MEMORY_RW | mCORE_MEMORY_MAPPED },
+	{ REGION_IO, "io", "MMIO", "Memory-Mapped I/O", BASE_IO, BASE_IO + SIZE_IO, SIZE_IO, mCORE_MEMORY_RW | mCORE_MEMORY_MAPPED },
+	{ REGION_PALETTE_RAM, "palette", "Palette", "Palette RAM (1kiB)", BASE_PALETTE_RAM, BASE_PALETTE_RAM + SIZE_PALETTE_RAM, SIZE_PALETTE_RAM, mCORE_MEMORY_RW | mCORE_MEMORY_MAPPED },
+	{ REGION_VRAM, "vram", "VRAM", "Video RAM (96kiB)", BASE_VRAM, BASE_VRAM + SIZE_VRAM, SIZE_VRAM, mCORE_MEMORY_RW | mCORE_MEMORY_MAPPED },
+	{ REGION_OAM, "oam", "OAM", "OBJ Attribute Memory (1kiB)", BASE_OAM, BASE_OAM + SIZE_OAM, SIZE_OAM, mCORE_MEMORY_RW | mCORE_MEMORY_MAPPED },
+	{ REGION_CART0, "cart0", "ROM", "Game Pak (64MiB)", BASE_CART0, BASE_CART0 + SIZE_CART_EXTENDED, SIZE_CART_EXTENDED, mCORE_MEMORY_READ | mCORE_MEMORY_WORM | mCORE_MEMORY_MAPPED },
+	{ REGION_CART1, "cart1", "ROM WS1", "Game Pak (Waitstate 1)", BASE_CART1, BASE_CART1 + SIZE_CART1, SIZE_CART1, mCORE_MEMORY_READ | mCORE_MEMORY_WORM | mCORE_MEMORY_MAPPED },
+	{ REGION_CART2, "cart2", "ROM WS2", "Game Pak (Waitstate 2)", BASE_CART2, BASE_CART2 + SIZE_CART2, SIZE_CART2, mCORE_MEMORY_READ | mCORE_MEMORY_WORM | mCORE_MEMORY_MAPPED },
+	{ REGION_CART_SRAM, "sram", "Flash", "Flash Memory (512kiB)", BASE_CART_SRAM, BASE_CART_SRAM + SIZE_CART_FLASH512, SIZE_CART_FLASH4M, mCORE_MEMORY_RW | mCORE_MEMORY_MAPPED, 7 },
+};
+
 static const struct mCoreMemoryBlock _GBAMemoryBlocksEEPROM[] = {
 	{ -1, "mem", "All", "All", 0, 0x10000000, 0x10000000, mCORE_MEMORY_VIRTUAL },
 	{ REGION_BIOS, "bios", "BIOS", "BIOS (16kiB)", BASE_BIOS, SIZE_BIOS, SIZE_BIOS, mCORE_MEMORY_READ | mCORE_MEMORY_MAPPED },
@@ -181,6 +196,9 @@ struct GBACore {
 	struct mDebuggerPlatform* debuggerPlatform;
 	struct mCheatDevice* cheatDevice;
 	struct GBAAudioMixer* audioMixer;
+	bool memorySettingsApplied;
+	bool expandedMemory;
+	enum SavedataType saveType;
 };
 
 static bool _GBACoreInit(struct mCore* core) {
@@ -206,6 +224,7 @@ static bool _GBACoreInit(struct mCore* core) {
 	gbacore->logContext = NULL;
 #endif
 	gbacore->audioMixer = NULL;
+	gbacore->memorySettingsApplied = false;
 
 	GBACreate(gba);
 	// TODO: Restore cheats
@@ -322,6 +341,8 @@ static void _GBACoreLoadConfig(struct mCore* core, const struct mCoreConfig* con
 
 	mCoreConfigCopyValue(&core->config, config, "allowOpposingDirections");
 	mCoreConfigCopyValue(&core->config, config, "gba.bios");
+	mCoreConfigCopyValue(&core->config, config, "gba.saveType");
+	mCoreConfigCopyValue(&core->config, config, "gba.rom64Special512");
 	mCoreConfigCopyValue(&core->config, config, "gba.forceGbp");
 	mCoreConfigCopyValue(&core->config, config, "gba.audioHle");
 	mCoreConfigCopyValue(&core->config, config, "vbaBugCompat");
@@ -509,6 +530,7 @@ static void _GBACoreSetAVStream(struct mCore* core, struct mAVStream* stream) {
 }
 
 static bool _GBACoreLoadROM(struct mCore* core, struct VFile* vf) {
+	((struct GBACore*) core)->memorySettingsApplied = false;
 #ifdef USE_ELF
 	struct ELF* elf = ELFOpen(vf);
 	if (elf) {
@@ -648,7 +670,24 @@ static void _GBACoreReset(struct mCore* core) {
 	if (!forceGbp) {
 		gba->memory.hw.devices &= ~HW_GB_PLAYER_DETECTION;
 	}
+	if (!gbacore->memorySettingsApplied) {
+		bool rom64Special512 = true;
+		mCoreConfigGetBoolValue(&core->config, "gba.rom64Special512", &rom64Special512);
+		gbacore->expandedMemory = rom64Special512 && gba->pristineRomSize == SIZE_CART_EXTENDED
+		                       && gba->memory.romSize == SIZE_CART_EXTENDED;
+		gba->memory.wramSize = gbacore->expandedMemory ? SIZE_WORKING_RAM_EXTENDED : SIZE_WORKING_RAM;
+		int saveType = SAVEDATA_AUTODETECT;
+		mCoreConfigGetIntValue(&core->config, "gba.saveType", &saveType);
+		gbacore->saveType = saveType >= SAVEDATA_FORCE_NONE && saveType <= SAVEDATA_FLASH4M
+		                 ? saveType : SAVEDATA_AUTODETECT;
+		gbacore->memorySettingsApplied = true;
+	}
 	GBAOverrideApplyDefaults(gba, gbacore->overrides);
+	if (gbacore->saveType != SAVEDATA_AUTODETECT) {
+		GBASavedataForceType(&gba->memory.savedata, gbacore->saveType);
+	} else if (gbacore->expandedMemory) {
+		GBASavedataForceType(&gba->memory.savedata, SAVEDATA_FLASH4M);
+	}
 	if (forceGbp) {
 		gba->memory.hw.devices |= HW_GB_PLAYER_DETECTION;
 	}
@@ -734,16 +773,46 @@ static void _GBACoreStep(struct mCore* core) {
 }
 
 static size_t _GBACoreStateSize(struct mCore* core) {
-	UNUSED(core);
-	return sizeof(struct GBASerializedState);
+	const struct GBA* gba = core->board;
+	return sizeof(struct GBASerializedState) + gba->memory.wramSize - SIZE_WORKING_RAM;
 }
 
 static bool _GBACoreLoadState(struct mCore* core, const void* state) {
-	return GBADeserialize(core->board, state);
+	struct GBA* gba = core->board;
+	if (gba->memory.wramSize == SIZE_WORKING_RAM) {
+		return GBADeserialize(gba, state);
+	}
+	// Expanded EWRAM states have a distinct magic; old states lost the upper RAM.
+	uint32_t magic;
+	LOAD_32(magic, 0, state);
+	if (magic != GBA_EXTENDED_SAVESTATE_MAGIC) {
+		return false;
+	}
+	struct GBASerializedState* base = malloc(sizeof(*base));
+	if (!base) {
+		return false;
+	}
+	memcpy(base, state, sizeof(*base));
+	STORE_32(GBASavestateMagic + GBASavestateVersion, 0, &base->versionMagic);
+	bool success = GBADeserialize(gba, base);
+	free(base);
+	if (success) {
+		memcpy((uint8_t*) gba->memory.wram + SIZE_WORKING_RAM,
+		       (const uint8_t*) state + sizeof(struct GBASerializedState),
+		       gba->memory.wramSize - SIZE_WORKING_RAM);
+	}
+	return success;
 }
 
 static bool _GBACoreSaveState(struct mCore* core, void* state) {
 	GBASerialize(core->board, state);
+	struct GBA* gba = core->board;
+	if (gba->memory.wramSize > SIZE_WORKING_RAM) {
+		STORE_32(GBA_EXTENDED_SAVESTATE_MAGIC, 0, state);
+		memcpy((uint8_t*) state + sizeof(struct GBASerializedState),
+		       (const uint8_t*) gba->memory.wram + SIZE_WORKING_RAM,
+		       gba->memory.wramSize - SIZE_WORKING_RAM);
+	}
 	return true;
 }
 
@@ -890,6 +959,9 @@ size_t _GBACoreListMemoryBlocks(const struct mCore* core, const struct mCoreMemo
 	case SAVEDATA_FLASH512:
 		*blocks = _GBAMemoryBlocksFlash512;
 		return sizeof(_GBAMemoryBlocksFlash512) / sizeof(*_GBAMemoryBlocksFlash512);
+	case SAVEDATA_FLASH4M:
+		*blocks = _GBAMemoryBlocksExpanded;
+		return sizeof(_GBAMemoryBlocksExpanded) / sizeof(*_GBAMemoryBlocksExpanded);
 	case SAVEDATA_FLASH1M:
 		*blocks = _GBAMemoryBlocksFlash1M;
 		return sizeof(_GBAMemoryBlocksFlash1M) / sizeof(*_GBAMemoryBlocksFlash1M);
@@ -911,7 +983,7 @@ void* _GBACoreGetMemoryBlock(struct mCore* core, size_t id, size_t* sizeOut) {
 		*sizeOut = SIZE_BIOS;
 		return gba->memory.bios;
 	case REGION_WORKING_RAM:
-		*sizeOut = SIZE_WORKING_RAM;
+		*sizeOut = gba->memory.wramSize;
 		return gba->memory.wram;
 	case REGION_WORKING_IRAM:
 		*sizeOut = SIZE_WORKING_IRAM;
@@ -931,6 +1003,10 @@ void* _GBACoreGetMemoryBlock(struct mCore* core, size_t id, size_t* sizeOut) {
 		*sizeOut = gba->memory.romSize;
 		return gba->memory.rom;
 	case REGION_CART_SRAM:
+		if (gba->memory.savedata.type == SAVEDATA_FLASH4M) {
+			*sizeOut = SIZE_CART_FLASH512;
+			return gba->memory.savedata.currentBank;
+		}
 		if (gba->memory.savedata.type == SAVEDATA_FLASH1M) {
 			*sizeOut = SIZE_CART_FLASH1M;
 			return gba->memory.savedata.currentBank;

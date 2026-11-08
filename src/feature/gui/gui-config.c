@@ -130,6 +130,28 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 	};
 #ifdef M_CORE_GBA
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+		.title = "存档类型(重开游戏生效)",
+		.data = GUI_V_S("gba.saveType"),
+		.state = 0,
+		.validStates = (const char*[]) {
+			"自动", "SRAM 32KB", "SRAM 64KB", "Flash 64KB", "Flash 128KB",
+			"Flash 512KB", "EEPROM 512B", "EEPROM 8KB", "不保存"
+		},
+		.stateMappings = (const struct GUIVariant[]) {
+			GUI_V_I(SAVEDATA_AUTODETECT), GUI_V_I(SAVEDATA_SRAM), GUI_V_I(SAVEDATA_SRAM512),
+			GUI_V_I(SAVEDATA_FLASH512), GUI_V_I(SAVEDATA_FLASH1M), GUI_V_I(SAVEDATA_FLASH4M),
+			GUI_V_I(SAVEDATA_EEPROM512), GUI_V_I(SAVEDATA_EEPROM), GUI_V_I(SAVEDATA_FORCE_NONE)
+		},
+		.nStates = 9
+	};
+	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
+		.title = "64MB特殊容量使用512KB(重开生效)",
+		.data = GUI_V_S("gba.rom64Special512"),
+		.state = true,
+		.validStates = (const char*[]) { "关闭", "打开" },
+		.nStates = 2
+	};
+	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
 		.title = "选择GBA BIOS路径",
 		.data = GUI_V_S("gba.bios"),
 	};
@@ -341,7 +363,7 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 						mCoreConfigSetUIntValue(&runner->config, item->data.v.s, v->v.u);
 						break;
 					case GUI_VARIANT_INT:
-						mCoreConfigSetUIntValue(&runner->config, item->data.v.s, v->v.i);
+						mCoreConfigSetIntValue(&runner->config, item->data.v.s, v->v.i);
 						break;
 					case GUI_VARIANT_FLOAT:
 						mCoreConfigSetFloatValue(&runner->config, item->data.v.s, v->v.f);

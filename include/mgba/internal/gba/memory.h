@@ -59,18 +59,21 @@ enum GBAMemoryBase {
 enum {
 	SIZE_BIOS = 0x00004000,
 	SIZE_WORKING_RAM = 0x00040000,
+	SIZE_WORKING_RAM_EXTENDED = 0x00080000,
 	SIZE_WORKING_IRAM = 0x00008000,
 	SIZE_IO = 0x00000400,
 	SIZE_PALETTE_RAM = 0x00000400,
 	SIZE_VRAM = 0x00018000,
 	SIZE_OAM = 0x00000400,
 	SIZE_CART0 = 0x02000000,
+	SIZE_CART_EXTENDED = 0x04000000,
 	SIZE_CART1 = 0x02000000,
 	SIZE_CART2 = 0x02000000,
 	SIZE_CART_SRAM = 0x00008000,
 	SIZE_CART_SRAM512 = 0x00010000,
 	SIZE_CART_FLASH512 = 0x00010000,
 	SIZE_CART_FLASH1M = 0x00020000,
+	SIZE_CART_FLASH4M = 0x00080000,
 	SIZE_CART_EEPROM = 0x00002000,
 	SIZE_CART_EEPROM512 = 0x00000200,
 
@@ -112,6 +115,7 @@ struct GBAMemory {
 	struct GBAMatrix matrix;
 	struct GBACartEReader ereader;
 	size_t romSize;
+	size_t wramSize;
 	uint32_t romMask;
 	uint16_t romID;
 	int fullBios;
@@ -141,6 +145,12 @@ struct GBAMemory {
 
 	bool mirroring;
 };
+
+// Expanded ROM hacks use the second waitstate window for the upper 32 MiB.
+// Keep the normal 32 MiB bus mask for smaller cartridges (including open bus).
+static inline uint32_t GBAROMAddressMask(const struct GBAMemory* memory) {
+	return memory->romMask | (SIZE_CART0 - 1);
+}
 
 struct GBA;
 void GBAMemoryInit(struct GBA* gba);
